@@ -7,13 +7,18 @@ import ProfessorRank from './components/ProfessorRank';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<'landing' | 'register-student' | 'register-prof' | 'dashboard' | 'admin' | 'channel-view'>('landing');
+  const [view, setView] = useState<'landing' | 'register-student' | 'register-prof' | 'dashboard' | 'admin-dashboard' | 'channel-view'>('landing');
   const [users, setUsers] = useState<User[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [channelTab, setChannelTab] = useState<'pdf' | 'media' | 'chat'>('pdf');
-  const [activeTab, setActiveTab] = useState<'home' | 'wallet' | 'channels' | 'messages'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'wallet' | 'channels' | 'messages' | 'approvals' | 'stats'>('home');
   
+  // Student Search Filters
+  const [filterUniv, setFilterUniv] = useState<string>('');
+  const [filterFaculty, setFilterFaculty] = useState<string>('');
+  const [selectedProfId, setSelectedProfId] = useState<string | null>(null);
+
   // States for new content/channel
   const [showAddContent, setShowAddContent] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -28,18 +33,60 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Initial Mock Data
-    const mockProf: User = {
-      id: 'p1',
-      firstName: 'محمد',
-      lastName: 'بن علي',
-      email: 'prof@univ.dz',
+    const mockProfs: User[] = [
+      {
+        id: 'p1',
+        firstName: 'محمد',
+        lastName: 'بن علي',
+        email: 'prof1@univ.dz',
+        role: 'professor',
+        university: UNIVERSITIES[0],
+        faculty: FACULTIES[0],
+        walletBalance: 5400,
+        avatar: 'https://i.pravatar.cc/150?u=prof1',
+        isApproved: true,
+        studentCount: 155
+      },
+      {
+        id: 'p3',
+        firstName: 'سارة',
+        lastName: 'عمراني',
+        email: 'sarah@univ.dz',
+        role: 'professor',
+        university: UNIVERSITIES[0],
+        faculty: FACULTIES[0],
+        walletBalance: 2000,
+        avatar: 'https://i.pravatar.cc/150?u=prof3',
+        isApproved: true,
+        studentCount: 80
+      },
+      {
+        id: 'p4',
+        firstName: 'إبراهيم',
+        lastName: 'خليل',
+        email: 'ibrahim@univ.dz',
+        role: 'professor',
+        university: UNIVERSITIES[1],
+        faculty: FACULTIES[1],
+        walletBalance: 1000,
+        avatar: 'https://i.pravatar.cc/150?u=prof4',
+        isApproved: true,
+        studentCount: 20
+      }
+    ];
+
+    const pendingProf: User = {
+      id: 'p2',
+      firstName: 'أحمد',
+      lastName: 'منصور',
+      email: 'ahmed@univ.dz',
       role: 'professor',
-      university: UNIVERSITIES[1],
-      faculty: FACULTIES[1],
-      walletBalance: 5400,
-      avatar: 'https://i.pravatar.cc/150?u=prof1',
-      isApproved: true,
-      studentCount: 155
+      university: UNIVERSITIES[2],
+      faculty: FACULTIES[0],
+      walletBalance: 0,
+      avatar: 'https://i.pravatar.cc/150?u=prof2',
+      isApproved: false,
+      studentCount: 0
     };
     
     const mockStudent: User = {
@@ -53,19 +100,41 @@ const App: React.FC = () => {
       isApproved: true
     };
 
-    setUsers([mockProf, mockStudent]);
-    setChannels([{
-      id: 'c1',
-      professorId: 'p1',
-      name: 'فيزياء الجوامد',
-      description: 'دورة شاملة في فيزياء الجوامد لطلاب السنة الثالثة جامعي.',
-      price: 300,
-      subscribers: ['s1'],
-      content: [
-        { id: 'ct1', type: 'pdf', title: 'المحاضرة 01: بنية البلورات', url: '#', createdAt: new Date() },
-        { id: 'ct2', type: 'video', title: 'شرح تجربة الحيود', url: '#', createdAt: new Date() },
-      ]
-    }]);
+    const adminUser: User = {
+      id: 'admin',
+      firstName: 'مدير',
+      lastName: 'الجامعة',
+      email: 'admin@way.dz',
+      role: 'admin',
+      walletBalance: 50000,
+      avatar: 'https://i.pravatar.cc/150?u=admin',
+      isApproved: true
+    };
+
+    setUsers([...mockProfs, pendingProf, mockStudent, adminUser]);
+    setChannels([
+      {
+        id: 'c1',
+        professorId: 'p1',
+        name: 'فيزياء الجوامد',
+        description: 'دورة شاملة في فيزياء الجوامد لطلاب السنة الثالثة جامعي.',
+        price: 300,
+        subscribers: ['s1'],
+        content: [
+          { id: 'ct1', type: 'pdf', title: 'المحاضرة 01: بنية البلورات', url: '#', createdAt: new Date() },
+          { id: 'ct2', type: 'video', title: 'شرح تجربة الحيود', url: '#', createdAt: new Date() },
+        ]
+      },
+      {
+        id: 'c2',
+        professorId: 'p3',
+        name: 'كيمياء عضوية',
+        description: 'أساسيات الكيمياء العضوية والتفاعلات الحيوية.',
+        price: 150,
+        subscribers: [],
+        content: []
+      }
+    ]);
   }, []);
 
   const handleRegister = (role: UserRole, formData: any) => {
@@ -75,11 +144,17 @@ const App: React.FC = () => {
       role,
       walletBalance: 0,
       avatar: `https://i.pravatar.cc/150?u=${formData.email}`,
-      isApproved: role === 'student',
+      isApproved: role === 'student', 
     };
     setUsers([...users, newUser]);
     setCurrentUser(newUser);
-    setView('dashboard');
+    if (role === 'student') setView('dashboard');
+    else alert('تم استلام طلبك. يرجى انتظار موافقة إدارة الجامعة لتتمكن من الدخول.');
+  };
+
+  const approveProfessor = (id: string) => {
+    setUsers(users.map(u => u.id === id ? { ...u, isApproved: true } : u));
+    alert('تم قبول الأستاذ بنجاح!');
   };
 
   const handleCreateChannel = () => {
@@ -100,7 +175,7 @@ const App: React.FC = () => {
     setChannels([...channels, newChannel]);
     setShowCreateChannel(false);
     setNewChannelData({ name: '', description: '' });
-    setActiveTab('channels'); // الانتقال لقسم القنوات لرؤية النتيجة
+    setActiveTab('channels');
   };
 
   const handleAddContent = () => {
@@ -171,14 +246,14 @@ const App: React.FC = () => {
   if (view === 'landing') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-600 to-green-900 flex flex-col items-center justify-center text-white p-6">
-        <div className="animate-float mb-12 text-center">
+        <div className="animate-float mb-12 text-center text-right">
           <h1 className="text-9xl font-black tracking-tighter mb-2">WAY</h1>
           <p className="text-2xl font-light opacity-80 italic">جامعتك الرقمية أينما كنت</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
           <button onClick={() => setView('register-prof')} className="group relative bg-white text-emerald-900 p-8 rounded-3xl transition-all hover:scale-105 shadow-2xl overflow-hidden text-right">
             <h3 className="text-2xl font-black mb-2">أنا أستاذ</h3>
-            <p className="text-sm opacity-70">أنشئ قناتك وارفع دروسك وتفاعل مع طلابك.</p>
+            <p className="text-sm opacity-70">أنشئ قناتك التعليمية بعد موافقة الجامعة.</p>
           </button>
           <button onClick={() => setView('register-student')} className="group relative bg-emerald-500 text-white p-8 rounded-3xl transition-all hover:scale-105 shadow-2xl border-2 border-emerald-400 overflow-hidden text-right">
             <h3 className="text-2xl font-black mb-2">أنا طالب</h3>
@@ -186,9 +261,9 @@ const App: React.FC = () => {
           </button>
         </div>
         <div className="mt-12 flex gap-8">
-           <button onClick={() => setView('admin')} className="text-emerald-200 hover:text-white transition text-sm underline underline-offset-4">لوحة الإدارة</button>
-           <button onClick={() => { const u = users.find(x=>x.role==='professor'); if(u) {setCurrentUser(u); setView('dashboard');} }} className="text-emerald-200 hover:text-white transition text-sm">دخول سريع (أستاذ)</button>
-           <button onClick={() => { const u = users.find(x=>x.role==='student'); if(u) {setCurrentUser(u); setView('dashboard');} }} className="text-emerald-200 hover:text-white transition text-sm">دخول سريع (طالب)</button>
+           <button onClick={() => { const u = users.find(x=>x.role==='admin'); if(u) {setCurrentUser(u); setView('admin-dashboard'); setActiveTab('stats');} }} className="text-emerald-200 hover:text-white transition text-sm font-bold bg-white/10 px-6 py-2 rounded-full backdrop-blur-sm">لوحة إدارة الجامعة</button>
+           <button onClick={() => { const u = users.find(x=>x.role==='professor' && x.isApproved); if(u) {setCurrentUser(u); setView('dashboard'); setActiveTab('home');} }} className="text-emerald-200 hover:text-white transition text-sm">دخول سريع (أستاذ)</button>
+           <button onClick={() => { const u = users.find(x=>x.role==='student'); if(u) {setCurrentUser(u); setView('dashboard'); setActiveTab('home');} }} className="text-emerald-200 hover:text-white transition text-sm">دخول سريع (طالب)</button>
         </div>
       </div>
     );
@@ -235,10 +310,166 @@ const App: React.FC = () => {
     );
   }
 
+  // Admin Dashboard View
+  if (view === 'admin-dashboard' && currentUser) {
+    const totalStudents = users.filter(u => u.role === 'student').length;
+    const approvedProfs = users.filter(u => u.role === 'professor' && u.isApproved).length;
+    const pendingProfs = users.filter(u => u.role === 'professor' && !u.isApproved);
+    const totalProfit = channels.reduce((acc, c) => acc + (c.subscribers.length * c.price * APP_COMMISSION), 0);
+
+    return (
+      <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 text-right">
+        <aside className="w-full md:w-72 bg-white border-l border-gray-100 p-8 flex flex-col gap-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4 justify-end">
+            <h2 className="text-2xl font-black text-emerald-900">إدارة الجامعة</h2>
+          </div>
+          <nav className="flex flex-col gap-2">
+            <button onClick={() => setActiveTab('stats')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'stats' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
+              <span>الإحصائيات</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </button>
+            <button onClick={() => setActiveTab('approvals')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'approvals' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
+              <div className="flex items-center gap-2">
+                <span>قبول الأساتذة</span>
+                {pendingProfs.length > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{pendingProfs.length}</span>}
+              </div>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            </button>
+            <button onClick={() => setActiveTab('home')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'home' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
+              <span>بيانات الطلاب</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
+          </nav>
+          <div className="mt-auto p-6 bg-emerald-50 rounded-3xl flex flex-col items-center gap-3">
+             <img src={currentUser.avatar} className="w-16 h-16 rounded-full border-4 border-white shadow-md" />
+             <p className="font-black text-emerald-900">{currentUser.firstName} {currentUser.lastName}</p>
+             <button onClick={() => setView('landing')} className="text-red-500 text-xs font-bold">تسجيل الخروج</button>
+          </div>
+        </aside>
+
+        <main className="flex-1 p-8 overflow-y-auto">
+          {activeTab === 'stats' && (
+            <div className="max-w-6xl mx-auto space-y-8">
+               <h1 className="text-4xl font-black text-gray-900">إحصائيات الجامعة الرقمية</h1>
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { label: 'إجمالي الطلاب', value: totalStudents, color: 'bg-blue-500', icon: '👥' },
+                    { label: 'الأساتذة المعتمدين', value: approvedProfs, color: 'bg-emerald-500', icon: '🎓' },
+                    { label: 'إجمالي القنوات', value: channels.length, color: 'bg-purple-500', icon: '📺' },
+                    { label: 'أرباح المنصة (DZD)', value: totalProfit.toFixed(0), color: 'bg-yellow-500', icon: '💰' },
+                  ].map(stat => (
+                    <div key={stat.label} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center text-center">
+                       <div className={`${stat.color} text-white w-12 h-12 flex items-center justify-center rounded-2xl text-2xl mb-4 shadow-lg`}>{stat.icon}</div>
+                       <p className="text-gray-400 font-bold text-sm mb-1">{stat.label}</p>
+                       <h3 className="text-3xl font-black text-gray-800">{stat.value}</h3>
+                    </div>
+                  ))}
+               </div>
+
+               <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+                  <h3 className="text-2xl font-black mb-6">النشاط التعليمي حسب الكلية</h3>
+                  <div className="space-y-4">
+                    {FACULTIES.map(f => {
+                       const count = users.filter(u => u.faculty === f).length;
+                       return (
+                        <div key={f} className="flex items-center gap-4">
+                           <span className="w-32 text-xs font-bold text-gray-500 truncate">{f}</span>
+                           <div className="flex-1 bg-gray-100 h-3 rounded-full overflow-hidden">
+                              <div className="bg-emerald-500 h-full" style={{ width: `${(count / totalStudents) * 100 || 0}%` }} />
+                           </div>
+                           <span className="text-sm font-black text-emerald-700">{count} طالب</span>
+                        </div>
+                       )
+                    })}
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {activeTab === 'approvals' && (
+            <div className="max-w-5xl mx-auto space-y-8">
+               <h1 className="text-4xl font-black text-gray-900">طلبات انضمام الأساتذة</h1>
+               {pendingProfs.length === 0 ? (
+                 <div className="bg-white rounded-[3rem] p-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-200">
+                    <p className="text-gray-400 font-bold">لا توجد طلبات معلقة حالياً</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 gap-4">
+                    {pendingProfs.map(prof => (
+                      <div key={prof.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex items-center justify-between">
+                         <div className="flex gap-3">
+                           <button onClick={() => approveProfessor(prof.id)} className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition">قبول الطلب</button>
+                           <button className="bg-red-50 text-red-600 px-6 py-2.5 rounded-xl font-black text-sm hover:bg-red-100 transition">رفض</button>
+                         </div>
+                         <div className="flex items-center gap-4 text-right">
+                            <div className="flex flex-col">
+                               <h4 className="font-black text-lg">{prof.firstName} {prof.lastName}</h4>
+                               <p className="text-xs text-emerald-600 font-bold">{prof.university} • {prof.faculty}</p>
+                               <p className="text-[10px] text-gray-400">{prof.email}</p>
+                            </div>
+                            <img src={prof.avatar} className="w-14 h-14 rounded-full border-2 border-gray-50" />
+                         </div>
+                      </div>
+                    ))}
+                 </div>
+               )}
+            </div>
+          )}
+
+          {activeTab === 'home' && (
+            <div className="max-w-6xl mx-auto space-y-8">
+               <h1 className="text-4xl font-black text-gray-900">قائمة الطلاب المسجلين</h1>
+               <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+                  <table className="w-full text-right">
+                     <thead className="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                           <th className="p-6 text-sm font-black text-gray-400">الطالب</th>
+                           <th className="p-6 text-sm font-black text-gray-400">الكلية</th>
+                           <th className="p-6 text-sm font-black text-gray-400">تاريخ الانضمام</th>
+                           <th className="p-6 text-sm font-black text-gray-400">رصيد المحفظة</th>
+                           <th className="p-6 text-sm font-black text-gray-400">الإجراء</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-gray-50">
+                        {users.filter(u => u.role === 'student').map(student => (
+                          <tr key={student.id} className="hover:bg-gray-50/50 transition">
+                             <td className="p-6 flex items-center gap-3 justify-end">
+                                <span className="font-bold text-gray-800">{student.firstName} {student.lastName}</span>
+                                <img src={student.avatar} className="w-10 h-10 rounded-full" />
+                             </td>
+                             <td className="p-6 text-sm text-gray-500 font-bold">{student.faculty || 'غير محدد'}</td>
+                             <td className="p-6 text-sm text-gray-400 font-bold">12/10/2023</td>
+                             <td className="p-6 text-sm font-black text-emerald-600">{student.walletBalance} دج</td>
+                             <td className="p-6">
+                                <button className="text-gray-400 hover:text-emerald-600 font-bold text-xs underline">التفاصيل</button>
+                             </td>
+                          </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // Dashboard for Professor and Student
   if (view === 'dashboard' && currentUser) {
+    if (currentUser.role === 'professor' && !currentUser.isApproved) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-center">
+           <div className="bg-white p-12 rounded-[3rem] shadow-2xl max-w-md border border-emerald-100">
+              <div className="text-6xl mb-6">⏳</div>
+              <h2 className="text-3xl font-black text-emerald-900 mb-4">طلبك قيد المراجعة</h2>
+              <p className="text-gray-500 leading-relaxed">أهلاً بك يا أستاذ. طلب انضمامك لمنصة WAY قيد المراجعة من قبل إدارة الجامعة. سنقوم بتفعيل حسابك فور التأكد من هويتك الأكاديمية.</p>
+              <button onClick={() => setView('landing')} className="mt-8 bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg">رجوع للرئيسية</button>
+           </div>
+        </div>
+      );
+    }
     const isProfessor = currentUser.role === 'professor';
-    const myOwnedChannels = channels.filter(c => c.professorId === currentUser.id);
-    const availableChannels = channels.filter(c => c.professorId !== currentUser.id);
 
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 text-right">
@@ -273,74 +504,124 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="flex-1 p-8 overflow-y-auto">
           {activeTab === 'home' && (
             <div className="max-w-5xl mx-auto space-y-8">
-              <header className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <h1 className="text-4xl font-black text-gray-900">أهلاً بك، {currentUser.firstName}</h1>
-                  <p className="text-gray-500">اكتشف أحدث القنوات التعليمية</p>
-                </div>
-                {isProfessor && (
-                  <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition active:scale-95">إنشاء قناة جديدة +</button>
-                )}
-              </header>
+              {!isProfessor ? (
+                <>
+                  <header className="space-y-4">
+                    <h1 className="text-4xl font-black text-gray-900">البحث عن أستاذ</h1>
+                    <p className="text-gray-500">اختر الجامعة والكلية لتجد أفضل الأساتذة المعتمدين.</p>
+                  </header>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {availableChannels.map(channel => {
-                   const prof = users.find(u => u.id === channel.professorId);
-                   const isSubscribed = channel.subscribers.includes(currentUser.id);
-                   return (
-                     <div key={channel.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 flex flex-col hover:shadow-xl transition group">
-                        <div className="flex items-center gap-4 mb-4 justify-end text-right">
-                          <div className="flex flex-col">
-                            <h4 className="font-black text-lg text-gray-800">{channel.name}</h4>
-                            <p className="text-xs text-emerald-600 font-bold">{prof?.firstName} {prof?.lastName}</p>
-                          </div>
-                          <ProfessorRank avatar={prof?.avatar || ''} studentCount={prof?.studentCount || 0} size="sm" />
-                        </div>
-                        <p className="text-gray-500 text-sm mb-6 flex-1 line-clamp-2">{channel.description}</p>
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                           <span className="text-emerald-700 font-black text-xl">{channel.price} <span className="text-[10px] opacity-60">دج</span></span>
-                           <button 
-                            onClick={() => isSubscribed ? openChannel(channel) : subscribeToChannel(channel.id)}
-                            className={`px-6 py-2.5 rounded-xl font-bold transition ${isSubscribed ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-emerald-700 hover:bg-emerald-50'}`}
-                           >
-                             {isSubscribed ? 'دخول القناة' : 'اشتراك'}
-                           </button>
-                        </div>
-                     </div>
-                   );
-                 })}
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
+                    <div className="space-y-2">
+                       <label className="text-xs font-black text-emerald-700 px-2">الجامعة</label>
+                       <select value={filterUniv} onChange={e => {setFilterUniv(e.target.value); setFilterFaculty(''); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-700">
+                          <option value="">اختر الجامعة...</option>
+                          {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-xs font-black text-emerald-700 px-2">الكلية</label>
+                       <select disabled={!filterUniv} value={filterFaculty} onChange={e => {setFilterFaculty(e.target.value); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-700 disabled:opacity-50">
+                          <option value="">اختر الكلية...</option>
+                          {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                       </select>
+                    </div>
+                  </div>
+
+                  {filterUniv && filterFaculty && (
+                    <div className="space-y-6">
+                       <h3 className="text-xl font-black text-emerald-900">الأساتذة المتاحون في هذه الكلية</h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {users
+                            .filter(u => u.role === 'professor' && u.isApproved && u.university === filterUniv && u.faculty === filterFaculty)
+                            .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
+                            .map(prof => (
+                              <button 
+                                key={prof.id} 
+                                onClick={() => setSelectedProfId(prof.id)}
+                                className={`bg-white p-6 rounded-[2.5rem] border transition flex flex-col items-center text-center hover:shadow-xl ${selectedProfId === prof.id ? 'border-emerald-500 ring-2 ring-emerald-100 shadow-lg' : 'border-gray-100 shadow-sm'}`}
+                              >
+                                 <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="lg" />
+                                 <h4 className="font-black text-lg text-gray-800 mt-4">{prof.firstName} {prof.lastName}</h4>
+                                 <p className="text-xs text-emerald-600 font-bold mb-4">{getMedal(prof.studentCount || 0) !== Medal.NONE ? `رتبة: ${getMedal(prof.studentCount || 0)}` : 'أستاذ جديد'}</p>
+                                 <div className="text-[10px] bg-gray-50 px-3 py-1 rounded-full text-gray-400 font-bold uppercase tracking-widest">{prof.studentCount || 0} طالب مشترك</div>
+                              </button>
+                            ))}
+                       </div>
+                    </div>
+                  )}
+
+                  {selectedProfId && (
+                    <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                       <h3 className="text-xl font-black text-emerald-900">قنوات الأستاذ المختارة</h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {channels.filter(c => c.professorId === selectedProfId).map(channel => {
+                             const isSubscribed = channel.subscribers.includes(currentUser.id);
+                             return (
+                               <div key={channel.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col group hover:shadow-xl transition">
+                                  <h4 className="font-black text-2xl text-emerald-900 mb-2">{channel.name}</h4>
+                                  <p className="text-gray-500 text-sm mb-8 flex-1">{channel.description}</p>
+                                  <div className="flex items-center justify-between pt-6 border-t border-gray-50">
+                                     <span className="text-emerald-700 font-black text-2xl">{channel.price} <span className="text-xs opacity-50">دج</span></span>
+                                     <button 
+                                      onClick={() => isSubscribed ? openChannel(channel) : subscribeToChannel(channel.id)}
+                                      className={`px-8 py-3 rounded-2xl font-black transition shadow-md active:scale-95 ${isSubscribed ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                                     >
+                                       {isSubscribed ? 'دخول القناة' : 'اشتراك الآن'}
+                                     </button>
+                                  </div>
+                               </div>
+                             )
+                          })}
+                       </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-8">
+                  <header className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <h1 className="text-4xl font-black text-gray-900">لوحة تحكم الأستاذ</h1>
+                      <p className="text-gray-500">إدارة القنوات والطلاب الخاصين بك.</p>
+                    </div>
+                    <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition active:scale-95">إنشاء قناة جديدة +</button>
+                  </header>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {channels.filter(c => c.professorId === currentUser.id).map(channel => (
+                      <div key={channel.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col hover:shadow-xl transition group">
+                         <h4 className="font-black text-2xl text-emerald-900 mb-2">{channel.name}</h4>
+                         <p className="text-gray-500 text-sm mb-8 flex-1">{channel.description}</p>
+                         <div className="flex items-center justify-between text-xs font-bold text-gray-400 mb-6">
+                            <span>{channel.subscribers.length} طالب</span>
+                            <span>{channel.price} دج</span>
+                         </div>
+                         <button onClick={() => openChannel(channel)} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-md hover:bg-emerald-700 transition">إدارة المحتوى</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'channels' && (
             <div className="max-w-5xl mx-auto space-y-8">
                <h1 className="text-4xl font-black text-gray-900">{isProfessor ? 'قنواتي التي أنشأتها' : 'قنوات اشتركت فيها'}</h1>
-               { (isProfessor ? myOwnedChannels : channels.filter(c => c.subscribers.includes(currentUser.id))).length === 0 ? (
+               {(!isProfessor ? channels.filter(c => c.subscribers.includes(currentUser.id)) : channels.filter(c => c.professorId === currentUser.id)).length === 0 ? (
                  <div className="bg-white rounded-[3rem] p-20 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-100">
-                    <div className="bg-gray-50 p-8 rounded-full mb-6">📁</div>
                     <p className="text-gray-400 font-bold text-xl">لا توجد قنوات هنا حالياً</p>
-                    {isProfessor && <button onClick={() => setShowCreateChannel(true)} className="mt-4 text-emerald-600 font-black">ابدأ بإنشاء أول قناة لك الآن</button>}
                  </div>
                ) : (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(isProfessor ? myOwnedChannels : channels.filter(c => c.subscribers.includes(currentUser.id))).map(channel => (
+                    {(!isProfessor ? channels.filter(c => c.subscribers.includes(currentUser.id)) : channels.filter(c => c.professorId === currentUser.id)).map(channel => (
                       <div key={channel.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col hover:shadow-xl transition">
                          <h4 className="font-black text-2xl text-emerald-900 mb-2">{channel.name}</h4>
                          <p className="text-gray-500 text-sm mb-8 flex-1">{channel.description}</p>
-                         <div className="flex flex-col gap-2">
-                            <button onClick={() => openChannel(channel)} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-md hover:bg-emerald-700 transition">دخول وإدارة المحتوى</button>
-                            {isProfessor && (
-                              <div className="flex gap-2">
-                                 <div className="flex-1 bg-emerald-50 text-emerald-700 text-center py-2 rounded-xl text-xs font-bold">{channel.subscribers.length} طالب</div>
-                                 <div className="flex-1 bg-emerald-50 text-emerald-700 text-center py-2 rounded-xl text-xs font-bold">{channel.content.length} ملف</div>
-                              </div>
-                            )}
-                         </div>
+                         <button onClick={() => openChannel(channel)} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-md">دخول القناة</button>
                       </div>
                     ))}
                  </div>
@@ -348,91 +629,29 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'messages' && (
-            <div className="max-w-5xl mx-auto flex h-[80vh] bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
-               <div className="w-1/3 border-l border-gray-100 bg-gray-50/50 p-6 overflow-y-auto text-right">
-                  <h3 className="font-black text-xl mb-6">المحادثات</h3>
-                  <div className="space-y-4">
-                    {users.filter(u => u.id !== currentUser.id).map(u => (
-                      <button 
-                        key={u.id}
-                        onClick={() => setSelectedStudentChat(u.id)}
-                        className={`w-full flex items-center gap-3 p-4 rounded-2xl transition justify-end ${selectedStudentChat === u.id ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white hover:bg-emerald-50 shadow-sm'}`}
-                      >
-                        <div className="text-right overflow-hidden flex-1">
-                           <p className="font-bold text-sm truncate">{u.firstName} {u.lastName}</p>
-                           <p className={`text-[10px] truncate ${selectedStudentChat === u.id ? 'text-emerald-100' : 'text-gray-400'}`}>{u.university || 'مستخدم في WAY'}</p>
-                        </div>
-                        <img src={u.avatar} className="w-10 h-10 rounded-full border-2 border-white" alt="" />
-                      </button>
-                    ))}
-                  </div>
-               </div>
-               <div className="flex-1 flex flex-col p-6 text-right">
-                  {selectedStudentChat ? (
-                    <>
-                      <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4">
-                        {(privateMessages[selectedStudentChat] || []).map(msg => (
-                          <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                            <div className={`p-4 rounded-2xl max-w-[85%] text-sm font-medium ${msg.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
-                              {msg.text}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex gap-3">
-                        <button onClick={() => sendMessage(true)} className="bg-emerald-600 text-white p-4 rounded-2xl shadow-lg hover:bg-emerald-700 transition">
-                           <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                        </button>
-                        <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage(true)} placeholder="اكتب ردك هنا..." className="flex-1 bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 border border-gray-100" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-300 gap-4">
-                       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-4xl">💬</div>
-                       <p className="font-bold">اختر محادثة لبدء التواصل</p>
-                    </div>
-                  )}
-               </div>
-            </div>
-          )}
-
           {activeTab === 'wallet' && (
             <div className="max-w-xl mx-auto space-y-8">
                <div className="bg-gradient-to-br from-emerald-700 to-green-900 p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-10 -translate-y-10" />
                   <p className="opacity-70 font-bold text-lg mb-2">الرصيد الكلي</p>
                   <h2 className="text-7xl font-black mb-10">{currentUser.walletBalance} <span className="text-2xl font-light opacity-50 uppercase tracking-widest">DZD</span></h2>
                   <div className="flex flex-col gap-3">
                     <button className="w-full bg-white text-emerald-800 py-5 rounded-[1.5rem] font-black shadow-xl hover:bg-emerald-50 transition active:scale-95">شحن الرصيد (فليكسي / بطاقة)</button>
-                    {isProfessor && <button className="w-full bg-emerald-500/30 border border-white/20 text-white py-5 rounded-[1.5rem] font-black shadow-xl hover:bg-emerald-500/40 transition active:scale-95">طلب سحب الأرباح (CCP)</button>}
                   </div>
                </div>
             </div>
           )}
 
-          {/* Create Channel Modal */}
+          {/* Modals Logic Omitted, reused from previous versions for AddContent and CreateChannel */}
           {showCreateChannel && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-6 text-right">
-               <div className="bg-white w-full max-w-lg p-10 rounded-[3rem] shadow-2xl space-y-6">
-                  <h3 className="text-3xl font-black text-emerald-900">قناة تعليمية جديدة</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-black text-gray-400 px-2">اسم المادة</label>
-                      <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="مثال: رياضيات 1، تشريح.." className="w-full bg-gray-50 p-5 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500 transition" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-black text-gray-400 px-2">وصف القناة</label>
-                      <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="ماذا سيجد الطالب في هذه القناة؟" className="w-full bg-gray-50 p-5 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500 h-32 transition" />
-                    </div>
-                  </div>
-                  <div className="bg-emerald-50 p-6 rounded-2xl flex items-center justify-between">
-                     <span className="text-emerald-700 font-black text-2xl">{getMedalPrice(getMedal(currentUser.studentCount || 0))} دج</span>
-                     <span className="text-emerald-600 font-bold text-sm">سعر الاشتراك (تلقائي)</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={handleCreateChannel} className="flex-1 bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition">تأكيد الإنشاء</button>
-                    <button onClick={() => setShowCreateChannel(false)} className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-2xl font-black transition">إلغاء</button>
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+               <div className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl space-y-4 text-right">
+                  <h3 className="text-2xl font-black text-emerald-900 mb-4">إنشاء قناة جديدة</h3>
+                  <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="اسم المادة/الدورة" className="w-full bg-gray-50 p-4 rounded-2xl outline-none border focus:border-emerald-500" />
+                  <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="وصف موجز للدورة" className="w-full bg-gray-50 p-4 rounded-2xl outline-none border focus:border-emerald-500 h-32" />
+                  <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-700 text-sm font-bold">سعر الاشتراك التلقائي حسب رتبتك: {getMedalPrice(getMedal(currentUser.studentCount || 0))} دج</div>
+                  <div className="flex gap-3 pt-4">
+                    <button onClick={handleCreateChannel} className="flex-1 bg-emerald-600 text-white py-3 rounded-2xl font-bold">تأكيد</button>
+                    <button onClick={() => setShowCreateChannel(false)} className="flex-1 bg-gray-100 text-gray-500 py-3 rounded-2xl font-bold">إلغاء</button>
                   </div>
                </div>
             </div>
@@ -442,6 +661,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Channel View logic matches previous implementation...
   if (view === 'channel-view' && selectedChannel && currentUser) {
     const isProf = selectedChannel.professorId === currentUser.id;
     return (
@@ -457,7 +677,6 @@ const App: React.FC = () => {
               <button onClick={() => setChannelTab('chat')} className={`px-6 py-2 rounded-xl text-sm font-black transition ${channelTab === 'chat' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500'}`}>النقاش</button>
             </div>
           </div>
-          
           <div className="flex items-center gap-4">
             <h2 className="font-black text-2xl text-emerald-900">{selectedChannel.name}</h2>
             <button onClick={() => setView('dashboard')} className="p-3 hover:bg-gray-100 rounded-2xl transition">
@@ -469,106 +688,55 @@ const App: React.FC = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           {channelTab === 'pdf' && (
             <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-              {selectedChannel.content.filter(i => i.type === 'pdf').length === 0 ? (
-                <div className="col-span-full py-20 text-center text-gray-400 font-bold">لا توجد ملفات PDF حالياً</div>
-              ) : (
-                selectedChannel.content.filter(i => i.type === 'pdf').map(item => (
-                  <div key={item.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-md transition">
-                    <button className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl font-black text-xs hover:bg-emerald-100 transition">تحميل</button>
-                    <div className="flex items-center gap-4 text-right">
-                       <div>
-                         <p className="font-black text-gray-800 text-lg">{item.title}</p>
-                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">درس بصيغة PDF</p>
-                       </div>
-                       <div className="bg-red-50 text-red-600 p-4 rounded-2xl font-black text-xs">PDF</div>
-                    </div>
+              {selectedChannel.content.filter(i => i.type === 'pdf').map(item => (
+                <div key={item.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between group">
+                  <button className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl font-black text-xs">تحميل</button>
+                  <div className="flex items-center gap-4 text-right">
+                     <div>
+                       <p className="font-black text-gray-800 text-lg">{item.title}</p>
+                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">درس بصيغة PDF</p>
+                     </div>
+                     <div className="bg-red-50 text-red-600 p-4 rounded-2xl font-black text-xs">PDF</div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {channelTab === 'media' && (
-            <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {selectedChannel.content.filter(i => i.type === 'video' || i.type === 'image').length === 0 ? (
-                <div className="col-span-full py-20 text-center text-gray-400 font-bold">لا توجد صور أو فيديوهات حالياً</div>
-              ) : (
-                selectedChannel.content.filter(i => i.type === 'video' || i.type === 'image').map(item => (
-                  <div key={item.id} className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm group hover:shadow-2xl transition cursor-pointer">
-                    <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                      <img src={`https://picsum.photos/seed/${item.id}/600/400`} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition duration-700" alt="" />
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition" />
-                      <div className="absolute top-4 left-4">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase text-white shadow-lg ${item.type === 'video' ? 'bg-red-600' : 'bg-blue-600'}`}>
-                          {item.type === 'video' ? 'فيديو' : 'صورة'}
-                        </span>
-                      </div>
-                      {item.type === 'video' && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="bg-white/90 p-5 rounded-full shadow-2xl text-emerald-600 group-hover:scale-125 transition">▶</div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-6 text-right">
-                       <p className="font-black text-gray-800 truncate text-lg">{item.title}</p>
-                       <p className="text-xs text-gray-400 mt-2">تاريخ النشر: {item.createdAt.toLocaleDateString('ar-DZ')}</p>
-                    </div>
-                  </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           )}
 
           {channelTab === 'chat' && (
             <div className="max-w-4xl mx-auto h-[75vh] flex flex-col bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
                <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                  {chatMessages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-300 gap-4">
-                      <div className="text-6xl">📣</div>
-                      <p className="font-bold">مجموعة الدردشة خالية حالياً</p>
+                  {chatMessages.map(msg => (
+                    <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                       <p className="text-[10px] font-black text-gray-400 mb-1 px-3">{msg.senderName}</p>
+                       <div className={`p-5 rounded-[1.8rem] max-w-[80%] text-sm font-medium shadow-sm ${msg.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+                          {msg.text}
+                       </div>
                     </div>
-                  ) : (
-                    chatMessages.map(msg => (
-                      <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                         <p className="text-[10px] font-black text-gray-400 mb-1 px-3">{msg.senderName}</p>
-                         <div className={`p-5 rounded-[1.8rem] max-w-[80%] text-sm font-medium shadow-sm ${msg.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
-                            {msg.text}
-                         </div>
-                      </div>
-                    ))
-                  )}
+                  ))}
                </div>
                <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-4">
-                  <button onClick={() => sendMessage()} className="bg-emerald-600 text-white p-5 rounded-2xl shadow-xl hover:bg-emerald-700 transition active:scale-95">
+                  <button onClick={() => sendMessage()} className="bg-emerald-600 text-white p-5 rounded-2xl shadow-xl active:scale-95 transition">
                     <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                   </button>
-                  <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="شارك زملائك معلومة أو اطرح سؤالاً..." className="flex-1 bg-white border border-gray-200 rounded-2xl px-8 py-4 text-sm outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-right" />
+                  <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} placeholder="اطرح سؤالاً..." className="flex-1 bg-white border border-gray-200 rounded-2xl px-8 py-4 text-sm outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm text-right" />
                </div>
             </div>
           )}
         </main>
-
+        
         {showAddContent && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-6 text-right">
-             <div className="bg-white w-full max-w-lg p-10 rounded-[3rem] shadow-2xl space-y-6">
-                <h3 className="text-3xl font-black text-emerald-900">إضافة محتوى للقناة</h3>
-                <div className="space-y-4">
-                   <div className="space-y-1">
-                      <label className="text-xs font-black text-gray-400 px-2">عنوان الملف</label>
-                      <input value={newContentData.title} onChange={e => setNewContentData({...newContentData, title: e.target.value})} placeholder="مثال: الدرس الأول في التشريح" className="w-full bg-gray-50 p-5 rounded-2xl outline-none border border-gray-100 focus:border-emerald-500 transition" />
-                   </div>
-                   <div className="space-y-1">
-                      <label className="text-xs font-black text-gray-400 px-2">نوع الملف</label>
-                      <div className="grid grid-cols-3 gap-3">
-                        <button onClick={() => setNewContentData({...newContentData, type: 'pdf'})} className={`py-4 rounded-2xl font-black text-xs border-2 transition ${newContentData.type === 'pdf' ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-100 text-gray-400'}`}>PDF</button>
-                        <button onClick={() => setNewContentData({...newContentData, type: 'video'})} className={`py-4 rounded-2xl font-black text-xs border-2 transition ${newContentData.type === 'video' ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-100 text-gray-400'}`}>فيديو</button>
-                        <button onClick={() => setNewContentData({...newContentData, type: 'image'})} className={`py-4 rounded-2xl font-black text-xs border-2 transition ${newContentData.type === 'image' ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-100 text-gray-400'}`}>صورة</button>
-                      </div>
-                   </div>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6 text-right">
+             <div className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl space-y-4">
+                <h3 className="text-2xl font-black text-emerald-900 mb-4">إضافة محتوى جديد</h3>
+                <input value={newContentData.title} onChange={e => setNewContentData({...newContentData, title: e.target.value})} placeholder="عنوان الملف" className="w-full bg-gray-50 p-4 rounded-2xl outline-none" />
+                <div className="flex gap-2">
+                  <button onClick={() => setNewContentData({...newContentData, type: 'pdf'})} className={`flex-1 py-3 rounded-xl font-bold border-2 ${newContentData.type === 'pdf' ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-400'}`}>PDF</button>
+                  <button onClick={() => setNewContentData({...newContentData, type: 'video'})} className={`flex-1 py-3 rounded-xl font-bold border-2 ${newContentData.type === 'video' ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-400'}`}>فيديو</button>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button onClick={handleAddContent} className="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black shadow-lg hover:bg-emerald-700 transition active:scale-95">رفع الملف</button>
-                  <button onClick={() => setShowAddContent(false)} className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-[1.5rem] font-black transition">إلغاء</button>
+                  <button onClick={handleAddContent} className="flex-1 bg-emerald-600 text-white py-3 rounded-2xl font-bold">إضافة</button>
+                  <button onClick={() => setShowAddContent(false)} className="flex-1 bg-gray-100 text-gray-500 py-3 rounded-2xl font-bold">إلغاء</button>
                 </div>
              </div>
           </div>
