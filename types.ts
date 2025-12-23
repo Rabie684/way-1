@@ -17,6 +17,7 @@ export interface User {
   role: UserRole;
   university?: string;
   faculty?: string;
+  specialty?: string; // Added field for what they teach
   walletBalance: number;
   avatar: string;
   isApproved: boolean;
