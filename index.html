@@ -7,10 +7,26 @@
     <title>WAY - جامعتك الرقمية</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Cairo', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
     <style>
       body {
         font-family: 'Cairo', sans-serif;
         background-color: #f8fafc;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .dark body {
+        background-color: #030712;
       }
       .aura-red { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.6); }
       .aura-orange { box-shadow: 0 0 15px 5px rgba(249, 115, 22, 0.6); }
@@ -35,7 +51,7 @@
 }
 </script>
 </head>
-  <body>
+  <body class="transition-colors duration-300">
     <div id="root"></div>
   </body>
 </html>

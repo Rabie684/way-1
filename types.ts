@@ -17,11 +17,14 @@ export interface User {
   role: UserRole;
   university?: string;
   faculty?: string;
-  specialty?: string; // Added field for what they teach
+  specialty?: string;
   walletBalance: number;
   avatar: string;
   isApproved: boolean;
   studentCount?: number;
+  phoneNumber?: string;     // For students to recharge
+  paymentMethod?: string;   // For professors (Email or CCP)
+  bio?: string;
 }
 
 export interface Channel {
