@@ -1,20 +1,44 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export const getJarvisAI = () => {
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
-export const getEducationalSummary = async (content: string) => {
+export const summarizeContent = async (title: string, type: string) => {
   try {
+    const ai = getJarvisAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `قم بتلخيص هذا المحتوى التعليمي للطالب بشكل مبسط وواضح باللغة العربية: ${content}`,
+      contents: `بصفتك "جارفيس" المساعد الذكي لمنصة WAY التعليمية الجزائرية، قم بتقديم ملخص تعليمي متميز لـ ${type === 'pdf' ? 'ملف درس' : 'فيديو تعليمي'} بعنوان "${title}".
+      اجعل الملخص يتضمن:
+      1. فكرة عامة مبسطة.
+      2. أهم 3 نقاط يجب التركيز عليها.
+      3. نصيحة دراسية سريعة للطالب.
+      استخدم لغة عربية فصيحة وسهلة، وأضف لمسة من التحفيز.`,
       config: {
-        systemInstruction: "أنت مساعد تعليمي ذكي لمنصة WAY الجزائرية. قدم ملخصات مفيدة ومحفزة.",
+        systemInstruction: "أنت جارفيس (Jarvis)، الذكاء الاصطناعي الخاص بجامعة WAY الرقمية. أنت ذكي، دقيق، وتساعد الطلاب والأساتذة في الجزائر على التفوق الدراسي.",
       }
     });
     return response.text;
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "عذراً، لم نتمكن من تلخيص المحتوى حالياً.";
+    console.error("Jarvis Error:", error);
+    return "عذراً أيها الطالب، يبدو أن أنظمة 'جارفيس' مشغولة حالياً. حاول مجدداً لاحقاً.";
+  }
+};
+
+export const jarvisAsk = async (question: string) => {
+  try {
+    const ai = getJarvisAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: question,
+      config: {
+        systemInstruction: "أنت جارفيس (Jarvis)، المساعد الذكي لمنصة WAY. أجب على أسئلة الطلاب والأساتذة بذكاء واحترافية.",
+      }
+    });
+    return response.text;
+  } catch (error) {
+    return "لم أستطع معالجة سؤالك، هل يمكنك صياغته بشكل أوضح؟";
   }
 };
