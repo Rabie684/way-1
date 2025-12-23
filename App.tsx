@@ -26,11 +26,11 @@ const App: React.FC = () => {
   const [jarvisChat, setJarvisChat] = useState<{role: 'user' | 'jarvis', text: string}[]>([]);
   const [jarvisInput, setJarvisInput] = useState('');
 
-  // States for new content/channel
+  // Modals States
   const [showAddContent, setShowAddContent] = useState(false);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelData, setNewChannelData] = useState({ name: '', description: '' });
-  const [newContentData, setNewContentData] = useState({ title: '', type: 'pdf' as 'pdf' | 'image' | 'video' });
+  const [newContentData, setNewContentData] = useState({ title: '', type: 'pdf' as 'pdf' | 'video' });
 
   // Chat states
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -128,7 +128,7 @@ const App: React.FC = () => {
       lastName: 'دزيري',
       email: 'student@mail.dz',
       role: 'student',
-      walletBalance: 1200,
+      walletBalance: 5000,
       avatar: 'https://i.pravatar.cc/150?u=stud1',
       isApproved: true
     };
@@ -146,15 +146,6 @@ const App: React.FC = () => {
 
     setUsers([...mockProfs, mockStudent, adminUser]);
     setChannels([
-      {
-        id: 'c1',
-        professorId: 'p1',
-        name: 'فيزياء الجوامد',
-        description: 'دورة شاملة في فيزياء الجوامد لطلاب السنة الثالثة جامعي.',
-        price: 300,
-        subscribers: ['s1'],
-        content: []
-      },
       {
         id: 'c_bakhta',
         professorId: 'p5',
@@ -203,40 +194,43 @@ const App: React.FC = () => {
     ]);
   }, []);
 
-  const handleJarvisSummarize = async (item: ContentItem) => {
-    setChannelTab('jarvis');
-    setIsJarvisThinking(true);
-    setJarvisResponse(null);
-    const summary = await summarizeContent(item.title, item.type);
-    setJarvisResponse(summary);
-    setIsJarvisThinking(false);
-  };
+  const handleCreateChannel = () => {
+    if (!currentUser || !newChannelData.name) return;
+    const medal = getMedal(currentUser.studentCount || 0);
+    const medalPrice = getMedalPrice(medal);
 
-  const handleJarvisChat = async () => {
-    if (!jarvisInput.trim()) return;
-    const userMsg = jarvisInput;
-    setJarvisInput('');
-    setJarvisChat(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsJarvisThinking(true);
-    
-    const response = await jarvisAsk(userMsg);
-    setJarvisChat(prev => [...prev, { role: 'jarvis', text: response || '' }]);
-    setIsJarvisThinking(false);
-  };
-
-  const handleRegister = (role: UserRole, formData: any) => {
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...formData,
-      role,
-      walletBalance: 0,
-      avatar: `https://i.pravatar.cc/150?u=${formData.email}`,
-      isApproved: role === 'student', 
+    const newChannel: Channel = {
+      id: 'c' + Date.now(),
+      professorId: currentUser.id,
+      name: newChannelData.name,
+      description: newChannelData.description,
+      price: medalPrice,
+      subscribers: [],
+      content: []
     };
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
-    if (role === 'student') setView('dashboard');
-    else alert('تم استلام طلبك. يرجى انتظار موافقة إدارة الجامعة.');
+
+    setChannels([...channels, newChannel]);
+    setShowCreateChannel(false);
+    setNewChannelData({ name: '', description: '' });
+    alert('تم إنشاء القناة بنجاح!');
+  };
+
+  const handleAddContent = () => {
+    if (!selectedChannel || !newContentData.title) return;
+    const newItem: ContentItem = {
+      id: 'ct' + Date.now(),
+      type: newContentData.type,
+      title: newContentData.title,
+      url: '#',
+      createdAt: new Date()
+    };
+    const updatedChannels = channels.map(c => 
+      c.id === selectedChannel.id ? { ...c, content: [...c.content, newItem] } : c
+    );
+    setChannels(updatedChannels);
+    setSelectedChannel({ ...selectedChannel, content: [...selectedChannel.content, newItem] });
+    setShowAddContent(false);
+    setNewContentData({ title: '', type: 'pdf' });
   };
 
   const subscribeToChannel = (channelId: string) => {
@@ -255,6 +249,26 @@ const App: React.FC = () => {
     alert(`تم الاشتراك في "${channel.name}" بنجاح!`);
   };
 
+  const handleJarvisSummarize = async (item: ContentItem) => {
+    setChannelTab('jarvis');
+    setIsJarvisThinking(true);
+    setJarvisResponse(null);
+    const summary = await summarizeContent(item.title, item.type);
+    setJarvisResponse(summary);
+    setIsJarvisThinking(false);
+  };
+
+  const handleJarvisChat = async () => {
+    if (!jarvisInput.trim()) return;
+    const userMsg = jarvisInput;
+    setJarvisInput('');
+    setJarvisChat(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsJarvisThinking(true);
+    const response = await jarvisAsk(userMsg);
+    setJarvisChat(prev => [...prev, { role: 'jarvis', text: response || '' }]);
+    setIsJarvisThinking(false);
+  };
+
   const openChannel = (channel: Channel) => {
     setSelectedChannel(channel);
     setView('channel-view');
@@ -263,18 +277,60 @@ const App: React.FC = () => {
     setJarvisChat([]);
   };
 
-  const sendMessage = () => {
-    if (!newMessage.trim() || !currentUser) return;
-    const msg: ChatMessage = {
-      id: Date.now().toString(),
-      senderId: currentUser.id,
-      senderName: `${currentUser.firstName} ${currentUser.lastName}`,
-      text: newMessage,
-      timestamp: new Date()
-    };
-    setChatMessages([...chatMessages, msg]);
-    setNewMessage('');
-  };
+  // Render Modals
+  const renderCreateChannelModal = () => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl space-y-6 text-right">
+        <h3 className="text-2xl font-black text-emerald-900">إنشاء قناة جديدة</h3>
+        <div className="space-y-4">
+          <input 
+            value={newChannelData.name} 
+            onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} 
+            placeholder="اسم المادة (مثلاً: اقتصاد كلي)" 
+            className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+          />
+          <textarea 
+            value={newChannelData.description} 
+            onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} 
+            placeholder="وصف القناة..." 
+            className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold h-32"
+          />
+        </div>
+        <div className="flex gap-4">
+          <button onClick={handleCreateChannel} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">تأكيد الإنشاء</button>
+          <button onClick={() => setShowCreateChannel(false)} className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAddContentModal = () => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl space-y-6 text-right">
+        <h3 className="text-2xl font-black text-emerald-900">إضافة محتوى جديد</h3>
+        <div className="space-y-4">
+          <input 
+            value={newContentData.title} 
+            onChange={e => setNewContentData({...newContentData, title: e.target.value})} 
+            placeholder="عنوان الدرس..." 
+            className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+          />
+          <select 
+            value={newContentData.type} 
+            onChange={e => setNewContentData({...newContentData, type: e.target.value as any})}
+            className="w-full bg-gray-50 p-4 rounded-2xl font-bold"
+          >
+            <option value="pdf">ملف PDF</option>
+            <option value="video">فيديو تعليمي</option>
+          </select>
+        </div>
+        <div className="flex gap-4">
+          <button onClick={handleAddContent} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">رفع الآن</button>
+          <button onClick={() => setShowAddContent(false)} className="flex-1 bg-gray-100 text-gray-500 py-4 rounded-2xl font-black">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  );
 
   if (view === 'landing') {
     return (
@@ -302,53 +358,11 @@ const App: React.FC = () => {
     );
   }
 
-  // Register Views...
-  if (view === 'register-student' || view === 'register-prof') {
-    const isProf = view === 'register-prof';
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-right">
-        <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 border border-gray-100">
-          <header className="text-center mb-8">
-            <h2 className="text-3xl font-black text-emerald-800 mb-2">إنشاء حساب {isProf ? 'أستاذ' : 'طالب'}</h2>
-          </header>
-          <form className="space-y-4" onSubmit={(e) => {
-            e.preventDefault();
-            const target = e.target as any;
-            handleRegister(isProf ? 'professor' : 'student', {
-              firstName: target.firstName.value,
-              lastName: target.lastName.value,
-              email: target.email.value,
-              ...(isProf ? { university: target.university.value, faculty: target.faculty.value } : {})
-            });
-          }}>
-            <div className="grid grid-cols-2 gap-4">
-              <input name="firstName" required className="bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="الاسم" />
-              <input name="lastName" required className="bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="اللقب" />
-            </div>
-            <input name="email" type="email" required className="w-full bg-gray-50 rounded-2xl p-4 focus:ring-2 focus:ring-emerald-500 outline-none text-left" placeholder="البريد الإلكتروني" />
-            {isProf && (
-              <>
-                <select name="university" className="w-full bg-gray-50 rounded-2xl p-4 outline-none">
-                  {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-                <select name="faculty" className="w-full bg-gray-50 rounded-2xl p-4 outline-none">
-                  {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </>
-            )}
-            <button type="submit" className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">إتمام التسجيل</button>
-            <button type="button" onClick={() => setView('landing')} className="w-full text-gray-400 text-sm py-2">رجوع</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Dashboard logic...
   if (view === 'dashboard' && currentUser) {
     const isProfessor = currentUser.role === 'professor';
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 text-right">
+        {showCreateChannel && renderCreateChannelModal()}
         <aside className="w-full md:w-72 bg-white border-l border-gray-100 p-8 flex flex-col gap-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4 justify-end">
             <h2 className="text-2xl font-black text-emerald-900 tracking-tight">WAY</h2>
@@ -357,15 +371,9 @@ const App: React.FC = () => {
           <nav className="flex flex-col gap-2">
             <button onClick={() => setActiveTab('home')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'home' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
               <span>الرئيسية</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            </button>
-            <button onClick={() => setActiveTab('channels')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'channels' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
-              <span>{isProfessor ? 'قنواتي' : 'اشتراكاتي'}</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
             </button>
             <button onClick={() => setActiveTab('wallet')} className={`flex items-center justify-between gap-4 p-4 rounded-2xl font-bold transition ${activeTab === 'wallet' ? 'bg-emerald-600 text-white shadow-xl' : 'text-gray-400 hover:bg-gray-50'}`}>
               <span>المحفظة</span>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </button>
           </nav>
           <div className="mt-auto p-6 bg-emerald-50 rounded-3xl flex flex-col items-center gap-3">
@@ -382,20 +390,18 @@ const App: React.FC = () => {
                 <>
                   <header className="space-y-4">
                     <h1 className="text-4xl font-black text-gray-900">البحث عن أستاذ</h1>
-                    <p className="text-gray-500">اختر الجامعة والكلية لتجد أفضل الأساتذة المعتمدين.</p>
                   </header>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
                     <div className="space-y-2 text-right">
                        <label className="text-xs font-black text-emerald-700 px-2">الجامعة</label>
-                       <select value={filterUniv} onChange={e => {setFilterUniv(e.target.value); setFilterFaculty(''); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-700">
+                       <select value={filterUniv} onChange={e => {setFilterUniv(e.target.value); setFilterFaculty(''); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
                           <option value="">اختر الجامعة...</option>
                           {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
                        </select>
                     </div>
                     <div className="space-y-2 text-right">
                        <label className="text-xs font-black text-emerald-700 px-2">الكلية</label>
-                       <select disabled={!filterUniv} value={filterFaculty} onChange={e => {setFilterFaculty(e.target.value); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-700 disabled:opacity-50">
+                       <select disabled={!filterUniv} value={filterFaculty} onChange={e => {setFilterFaculty(e.target.value); setSelectedProfId(null);}} className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold disabled:opacity-50">
                           <option value="">اختر الكلية...</option>
                           {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
                        </select>
@@ -408,12 +414,10 @@ const App: React.FC = () => {
                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {users
                             .filter(u => u.role === 'professor' && u.isApproved && u.university === filterUniv && u.faculty === filterFaculty)
-                            .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
                             .map(prof => (
                               <button key={prof.id} onClick={() => setSelectedProfId(prof.id)} className={`bg-white p-6 rounded-[2.5rem] border transition flex flex-col items-center text-center hover:shadow-xl ${selectedProfId === prof.id ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-gray-100 shadow-sm'}`}>
                                  <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="lg" />
                                  <h4 className="font-black text-lg text-gray-800 mt-4">{prof.firstName} {prof.lastName}</h4>
-                                 <div className="text-[10px] bg-gray-50 px-3 py-1 rounded-full text-gray-400 font-bold uppercase tracking-widest mt-2">{prof.studentCount || 0} طالب</div>
                               </button>
                             ))}
                        </div>
@@ -430,11 +434,14 @@ const App: React.FC = () => {
                                <div key={channel.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 flex flex-col group hover:shadow-xl transition">
                                   <h4 className="font-black text-2xl text-emerald-900 mb-2">{channel.name}</h4>
                                   <p className="text-gray-500 text-sm mb-8 flex-1">{channel.description}</p>
-                                  <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                                     <button onClick={() => isSubscribed ? openChannel(channel) : subscribeToChannel(channel.id)} className={`w-full py-4 rounded-2xl font-black transition shadow-md flex items-center justify-center gap-3 ${isSubscribed ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
-                                       {isSubscribed ? 'دخول القناة' : `اشتراك (${channel.price} دج)`}
-                                     </button>
-                                  </div>
+                                  <button onClick={() => isSubscribed ? openChannel(channel) : subscribeToChannel(channel.id)} className={`w-full py-5 rounded-2xl font-black transition shadow-md flex items-center justify-center gap-3 ${isSubscribed ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}>
+                                    {isSubscribed ? 'دخول القناة' : (
+                                      <>
+                                        <span>اشتراك في القناة</span>
+                                        <span className="bg-emerald-700 text-white px-3 py-1 rounded-lg text-sm">{channel.price} دج</span>
+                                      </>
+                                    )}
+                                  </button>
                                </div>
                              )
                           })}
@@ -443,10 +450,10 @@ const App: React.FC = () => {
                   )}
                 </>
               ) : (
-                <div className="space-y-8">
-                  <header className="flex justify-between items-center">
+                <div className="space-y-8 text-right">
+                  <header className="flex justify-between items-center flex-row-reverse">
                     <h1 className="text-4xl font-black text-gray-900">لوحة تحكم الأستاذ</h1>
-                    <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg">إنشاء قناة +</button>
+                    <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:scale-105 transition">إنشاء قناة +</button>
                   </header>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {channels.filter(c => c.professorId === currentUser.id).map(channel => (
@@ -466,7 +473,7 @@ const App: React.FC = () => {
             <div className="max-w-xl mx-auto space-y-8">
                <div className="bg-gradient-to-br from-emerald-700 to-green-900 p-12 rounded-[3.5rem] text-white shadow-2xl">
                   <p className="opacity-70 font-bold text-lg mb-2">رصيد محفظتك</p>
-                  <h2 className="text-7xl font-black mb-10">{currentUser.walletBalance} <span className="text-2xl font-light opacity-50 uppercase tracking-widest">DZD</span></h2>
+                  <h2 className="text-7xl font-black mb-10">{currentUser.walletBalance} <span className="text-2xl font-light opacity-50">DZD</span></h2>
                   <button className="w-full bg-white text-emerald-800 py-5 rounded-[1.5rem] font-black shadow-xl hover:bg-emerald-50 transition active:scale-95">شحن الرصيد</button>
                </div>
             </div>
@@ -476,14 +483,14 @@ const App: React.FC = () => {
     );
   }
 
-  // Channel View with Jarvis
   if (view === 'channel-view' && selectedChannel && currentUser) {
+    const isProf = selectedChannel.professorId === currentUser.id;
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 text-right">
+        {showAddContent && renderAddContentModal()}
         <header className="bg-white border-b border-gray-100 p-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div className="flex bg-gray-100 p-1 rounded-2xl">
             <button onClick={() => setChannelTab('pdf')} className={`px-6 py-2 rounded-xl text-sm font-black transition ${channelTab === 'pdf' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500'}`}>المكتبة</button>
-            <button onClick={() => setChannelTab('chat')} className={`px-6 py-2 rounded-xl text-sm font-black transition ${channelTab === 'chat' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500'}`}>النقاش</button>
             <button onClick={() => setChannelTab('jarvis')} className={`px-6 py-2 rounded-xl text-sm font-black transition flex items-center gap-2 ${channelTab === 'jarvis' ? 'bg-emerald-600 shadow-sm text-white' : 'text-emerald-700'}`}>
               <span>جارفيس AI ✨</span>
             </button>
@@ -499,6 +506,12 @@ const App: React.FC = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           {channelTab === 'pdf' && (
             <div className="max-w-4xl mx-auto space-y-6">
+              {isProf && (
+                <button onClick={() => setShowAddContent(true)} className="w-full bg-white border-2 border-dashed border-emerald-300 p-8 rounded-[2.5rem] text-emerald-600 font-black text-xl hover:bg-emerald-50 transition">إضافة درس جديد +</button>
+              )}
+              {selectedChannel.content.length === 0 && !isProf && (
+                 <div className="text-center p-20 text-gray-400 font-bold">لا يوجد محتوى حالياً في هذه القناة</div>
+              )}
               {selectedChannel.content.map(item => (
                 <div key={item.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex items-center justify-between group">
                   <div className="flex gap-2">
@@ -522,12 +535,17 @@ const App: React.FC = () => {
                   <div className="relative z-10 flex flex-col items-center text-center">
                      <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(16,185,129,0.5)] mb-6 animate-pulse">🤖</div>
                      <h3 className="text-3xl font-black mb-2">أهلاً بك في "جارفيس"</h3>
-                     <p className="text-emerald-200 font-bold opacity-80">أنا مساعدك الذكي المبني بتقنيات Gemini، كيف يمكنني مساعدتك اليوم؟</p>
+                     <p className="text-emerald-200 font-bold opacity-80 text-lg">أنا مساعدك الذكي المبني بتقنيات Gemini، كيف يمكنني مساعدتك اليوم؟</p>
                   </div>
                </div>
 
                {isJarvisThinking && (
                  <div className="flex flex-col items-center gap-4 py-10">
+                    <div className="flex gap-2">
+                       <div className="w-3 h-3 bg-emerald-600 rounded-full animate-bounce"></div>
+                       <div className="w-3 h-3 bg-emerald-600 rounded-full animate-bounce [animation-delay:-.3s]"></div>
+                       <div className="w-3 h-3 bg-emerald-600 rounded-full animate-bounce [animation-delay:-.5s]"></div>
+                    </div>
                     <p className="text-emerald-700 font-black animate-pulse">جارفيس يحلل البيانات الآن...</p>
                  </div>
                )}
