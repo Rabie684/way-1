@@ -485,7 +485,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'messages' && (
-            <div className="max-w-6xl mx-auto h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-500">
+            <div className="max-w-6xl mx-auto h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-700">
                <div className={`w-full md:w-80 border-l dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/50 flex flex-col ${activeChatUserId ? 'hidden md:flex' : 'flex'}`}>
                   <div className="p-6 md:p-8 border-b dark:border-gray-800 font-black text-xl md:text-2xl text-emerald-900 dark:text-emerald-400">{t('المحادثات', 'Messages')}</div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -651,7 +651,7 @@ const App: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-12 overflow-y-auto">
           {channelTab === 'pdf' && (
-            <div className="max-w-5xl mx-auto space-y-8 md:space-y-10 animate-in fade-in duration-700">
+            <div className="max-w-5xl mx-auto space-y-8 md:space-y-10 animate-in fade-in duration-500">
               {isProf && <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-4 md:border-8 border-dashed border-emerald-500/10 dark:border-emerald-500/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4.5rem] text-emerald-600 font-black text-xl md:text-3xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition shadow-sm group">
                 <span className="block mb-2 group-hover:scale-125 transition-transform text-4xl">➕</span>
                 {t('رفع درس جديد للطلاب', 'Add Lesson +')}
@@ -720,26 +720,25 @@ const App: React.FC = () => {
           )}
 
           {channelTab === 'jarvis' && (
-            <div className="max-w-5xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-700">
+            <div className="max-w-5xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-500">
                <div className="bg-emerald-900 p-10 md:p-20 rounded-[3rem] md:rounded-[5rem] text-white shadow-2xl text-center relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-40 h-40 md:w-80 md:h-80 bg-emerald-500/5 rounded-full -ml-20 md:-ml-40 -mt-20 md:-mt-40 animate-pulse"></div>
                   <h3 className="text-4xl md:text-7xl font-black mb-4 md:mb-6 tracking-tighter italic">Jarvis AI</h3>
-                  <p className="opacity-70 text-lg md:text-2xl font-bold">{t('مساعدك الجزائري الذكي للتفوق الأكاديمي.', 'Your smart academic assistant.')}</p>
-                  <div className="mt-4 text-emerald-300 font-bold text-sm bg-emerald-500/20 inline-block px-4 py-1 rounded-full">{t('مدعوم بأبحاث ASJP ومصادر أكاديمية عالمية', 'Powered by ASJP & Global Academic Sources')}</div>
+                  <p className="opacity-70 text-lg md:text-2xl font-bold">{t('مساعدك الأكاديمي للبحث والتوثيق.', 'Your academic research assistant.')}</p>
+                  <div className="mt-4 text-emerald-300 font-bold text-sm bg-emerald-500/20 inline-block px-4 py-1 rounded-full">{t('نظام استخراج مراجع: ASJP & Google Scholar', 'References: ASJP & Google Scholar')}</div>
                </div>
                
                {isJarvisThinking && <div className="text-center text-emerald-700 dark:text-emerald-400 font-black animate-pulse text-xl md:text-3xl py-12 flex items-center justify-center gap-4 md:gap-6">
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce shadow-lg"></div>
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-150 shadow-lg"></div>
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-300 shadow-lg"></div>
-                  {t('جارفيس يحلل البيانات الأكاديمية العميقة...', 'Jarvis is analyzing deep academic data...')}
+                  {t('جارفيس يراجع المصادر الأكاديمية المعتمدة...', 'Jarvis is reviewing verified academic sources...')}
                </div>}
 
                {(jarvisResponse || jarvisChat.some(m => m.role === 'jarvis')) && (
                  <div className="bg-white dark:bg-gray-900 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4.5rem] border-t-[10px] md:border-t-[20px] border-emerald-600 shadow-2xl text-right animate-in slide-in-from-top-12 duration-700 space-y-12">
                     
                     <div className="space-y-10">
-                      {/* If there's a standalone response (like summary) show it first */}
                       {jarvisResponse && (
                         <div className="p-8 md:p-10 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-[2rem] border dark:border-gray-700 whitespace-pre-line leading-relaxed text-lg md:text-2xl font-medium">
                            {jarvisResponse}
@@ -754,7 +753,7 @@ const App: React.FC = () => {
                            
                            {msg.role === 'jarvis' && msg.sources && msg.sources.length > 0 && (
                              <div className="w-full bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-3xl mt-4 space-y-4">
-                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-sm flex items-center gap-2">📚 {t('المراجع الأكاديمية المعتمدة:', 'Verified Academic References:')}</p>
+                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-sm flex items-center gap-2">📑 {t('المراجع الأكاديمية المستخرجة:', 'Extracted Academic References:')}</p>
                                <div className="flex flex-wrap gap-3">
                                  {msg.sources.map((src: any, idx: number) => (
                                    <a key={idx} href={src.web?.uri || src.maps?.uri} target="_blank" rel="noopener noreferrer" className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl text-xs font-bold text-emerald-600 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-500 hover:text-white transition shadow-sm truncate max-w-[200px]">
@@ -775,7 +774,7 @@ const App: React.FC = () => {
                <div className="space-y-8 sticky bottom-4">
                   <div className="flex gap-4 md:gap-6 items-center">
                      <button onClick={handleJarvisChat} className="bg-emerald-600 text-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl text-3xl md:text-5xl active:scale-90 transition transform hover:rotate-12 hover:bg-emerald-700">🚀</button>
-                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("اسأل جارفيس للحصول على مساعدة أكاديمية عميقة ومنظمة...", "Ask Jarvis for structured academic help...")} className="flex-1 bg-white dark:bg-gray-900 border-4 border-transparent focus:border-emerald-500 rounded-[2rem] md:rounded-[3rem] px-8 md:px-12 py-6 md:py-10 font-bold text-lg md:text-2xl outline-none text-right dark:text-white shadow-2xl transition" />
+                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("استخرج مراجع، لخص نصاً، أو ابحث في المصادر الجامعية...", "Extract references, summarize text, or search university sources...")} className="flex-1 bg-white dark:bg-gray-900 border-4 border-transparent focus:border-emerald-500 rounded-[2rem] md:rounded-[3rem] px-8 md:px-12 py-6 md:py-10 font-bold text-lg md:text-2xl outline-none text-right dark:text-white shadow-2xl transition" />
                   </div>
                </div>
             </div>
