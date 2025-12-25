@@ -53,13 +53,11 @@ const App: React.FC = () => {
     const targetUniv = "جامعة ابن خلدون ملحقة قصر الشلالة";
     const targetFaculty = "كلية العلوم الاقتصادية";
 
-    // Set professor avatars to empty string
     const mockProfs: User[] = [
       { id: 'p5', firstName: 'بختة', lastName: 'بن الطاهر', specialty: 'الاقتصاد الجزئي', email: 'bentahar@univ.dz', role: 'professor', university: targetUniv, faculty: targetFaculty, walletBalance: 1250, avatar: '', isApproved: true, studentCount: 120, paymentMethod: 'bentahar.ccp@algeriepost.dz' },
       { id: 'p6', firstName: 'الأستاذ', lastName: 'ايت عيسى', specialty: 'الاقتصاد الكلي', email: 'aitissa@univ.dz', role: 'professor', university: targetUniv, faculty: targetFaculty, walletBalance: 850, avatar: '', isApproved: true, studentCount: 105 },
     ];
 
-    // Updated with User's specific info: حمر العين ربيع
     const mockStudent: User = { 
       id: 's1', 
       firstName: 'ربيع', 
@@ -67,7 +65,7 @@ const App: React.FC = () => {
       email: 'rabieriri665@gmail.com', 
       role: 'student', 
       walletBalance: 2500, 
-      avatar: '', // Image is empty as requested
+      avatar: '', 
       isApproved: true, 
       phoneNumber: '0781723461' 
     };
@@ -89,22 +87,19 @@ const App: React.FC = () => {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Combined Auto-Scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [personalChats, broadcastMessages, jarvisChat, activeChatUserId, channelTab, activeTab]);
 
-  // Translation Helper
   const t = (ar: string, en: string) => language === 'ar' ? ar : en;
 
-  // Actions
   const handleRegister = (role: UserRole, data: any) => {
     const newUser: User = {
       id: 'u' + Date.now(),
       ...data,
       role,
       walletBalance: role === 'student' ? 500 : 0,
-      avatar: '', // New accounts also start with empty avatar
+      avatar: '', 
       isApproved: role === 'student'
     };
     setUsers(prev => [...prev, newUser]);
@@ -313,7 +308,6 @@ const App: React.FC = () => {
   if (view === 'dashboard' && currentUser) {
     const isProf = currentUser.role === 'professor';
     
-    // Determine Sidebar Tabs
     const studentTabs = [
       {id:'home', l:t('الرئيسية', 'Home'), i: '🏠'},
       {id:'my-channels', l:t('قنواتي', 'My Channels'), i: '📡'},
@@ -340,14 +334,12 @@ const App: React.FC = () => {
           </div>
         ), handleCreateChannel, () => setShowCreateChannel(false))}
 
-        {/* Mobile Header */}
         <div className="md:hidden bg-white dark:bg-gray-900 border-b dark:border-gray-800 p-4 flex items-center justify-between sticky top-0 z-[60] shadow-sm">
            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-emerald-600 text-2xl">☰</button>
            <h2 className="text-2xl font-black text-emerald-900 dark:text-emerald-400 tracking-tighter">WAY</h2>
            <div className="w-8"></div>
         </div>
 
-        {/* Sidebar */}
         <aside className={`${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} fixed md:static inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 border-l dark:border-gray-800 p-10 flex flex-col gap-8 shadow-xl z-50 transition-transform duration-300`}>
           <div className="flex items-center justify-between md:justify-center">
             <h2 className="text-4xl font-black text-emerald-900 dark:text-emerald-400 text-center tracking-tighter">WAY</h2>
@@ -371,7 +363,6 @@ const App: React.FC = () => {
           </div>
         </aside>
 
-        {/* Overlay for Mobile Sidebar */}
         {isSidebarOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-[40]" onClick={() => setIsSidebarOpen(false)}></div>}
 
         <main className="flex-1 p-4 md:p-12 overflow-y-auto transition-colors duration-300">
@@ -494,8 +485,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'messages' && (
-            <div className="max-w-6xl mx-auto h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-700">
-               {/* Contact List */}
+            <div className="max-w-6xl mx-auto h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-500">
                <div className={`w-full md:w-80 border-l dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/50 flex flex-col ${activeChatUserId ? 'hidden md:flex' : 'flex'}`}>
                   <div className="p-6 md:p-8 border-b dark:border-gray-800 font-black text-xl md:text-2xl text-emerald-900 dark:text-emerald-400">{t('المحادثات', 'Messages')}</div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -511,7 +501,6 @@ const App: React.FC = () => {
                   </div>
                </div>
 
-               {/* Chat Window */}
                <div className={`flex-1 flex flex-col relative bg-white dark:bg-gray-900 ${activeChatUserId ? 'flex' : 'hidden md:flex'}`}>
                   {activeChatUserId ? (
                     <>
@@ -662,7 +651,7 @@ const App: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-12 overflow-y-auto">
           {channelTab === 'pdf' && (
-            <div className="max-w-5xl mx-auto space-y-8 md:space-y-10 animate-in fade-in duration-500">
+            <div className="max-w-5xl mx-auto space-y-8 md:space-y-10 animate-in fade-in duration-700">
               {isProf && <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-4 md:border-8 border-dashed border-emerald-500/10 dark:border-emerald-500/5 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4.5rem] text-emerald-600 font-black text-xl md:text-3xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition shadow-sm group">
                 <span className="block mb-2 group-hover:scale-125 transition-transform text-4xl">➕</span>
                 {t('رفع درس جديد للطلاب', 'Add Lesson +')}
@@ -731,40 +720,45 @@ const App: React.FC = () => {
           )}
 
           {channelTab === 'jarvis' && (
-            <div className="max-w-5xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-500">
+            <div className="max-w-5xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-700">
                <div className="bg-emerald-900 p-10 md:p-20 rounded-[3rem] md:rounded-[5rem] text-white shadow-2xl text-center relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-40 h-40 md:w-80 md:h-80 bg-emerald-500/5 rounded-full -ml-20 md:-ml-40 -mt-20 md:-mt-40 animate-pulse"></div>
                   <h3 className="text-4xl md:text-7xl font-black mb-4 md:mb-6 tracking-tighter italic">Jarvis AI</h3>
                   <p className="opacity-70 text-lg md:text-2xl font-bold">{t('مساعدك الجزائري الذكي للتفوق الأكاديمي.', 'Your smart academic assistant.')}</p>
-                  <div className="mt-4 text-emerald-300 font-bold text-sm bg-emerald-500/20 inline-block px-4 py-1 rounded-full">{t('مدعوم بأبحاث ASJP', 'Powered by ASJP research')}</div>
+                  <div className="mt-4 text-emerald-300 font-bold text-sm bg-emerald-500/20 inline-block px-4 py-1 rounded-full">{t('مدعوم بأبحاث ASJP ومصادر أكاديمية عالمية', 'Powered by ASJP & Global Academic Sources')}</div>
                </div>
                
                {isJarvisThinking && <div className="text-center text-emerald-700 dark:text-emerald-400 font-black animate-pulse text-xl md:text-3xl py-12 flex items-center justify-center gap-4 md:gap-6">
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce shadow-lg"></div>
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-150 shadow-lg"></div>
                   <div className="w-3 h-3 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-300 shadow-lg"></div>
-                  {t('جارفيس يبحث في المجلات الجزائرية...', 'Jarvis is searching ASJP...')}
+                  {t('جارفيس يحلل البيانات الأكاديمية العميقة...', 'Jarvis is analyzing deep academic data...')}
                </div>}
 
                {(jarvisResponse || jarvisChat.some(m => m.role === 'jarvis')) && (
                  <div className="bg-white dark:bg-gray-900 p-8 md:p-16 rounded-[2.5rem] md:rounded-[4.5rem] border-t-[10px] md:border-t-[20px] border-emerald-600 shadow-2xl text-right animate-in slide-in-from-top-12 duration-700 space-y-12">
                     
-                    {/* Render Chat History */}
                     <div className="space-y-10">
+                      {/* If there's a standalone response (like summary) show it first */}
+                      {jarvisResponse && (
+                        <div className="p-8 md:p-10 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-[2rem] border dark:border-gray-700 whitespace-pre-line leading-relaxed text-lg md:text-2xl font-medium">
+                           {jarvisResponse}
+                        </div>
+                      )}
+
                       {jarvisChat.map((msg, i) => (
                         <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} gap-4`}>
-                           <div className={`p-6 md:p-8 rounded-[2rem] md:rounded-[3.5rem] max-w-[95%] md:max-w-[85%] text-lg md:text-2xl font-black shadow-lg relative ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border dark:border-gray-700'}`}>
+                           <div className={`p-6 md:p-8 rounded-[2rem] md:rounded-[3.5rem] max-w-[95%] md:max-w-[85%] text-lg md:text-2xl font-medium shadow-lg relative whitespace-pre-line leading-relaxed ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border dark:border-gray-700'}`}>
                               {msg.text}
                            </div>
                            
-                           {/* Show Sources for Jarvis Responses */}
                            {msg.role === 'jarvis' && msg.sources && msg.sources.length > 0 && (
                              <div className="w-full bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-3xl mt-4 space-y-4">
-                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-sm flex items-center gap-2">🔍 {t('المصادر العلمية (ASJP / غوغل):', 'Scientific Sources:')}</p>
+                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-sm flex items-center gap-2">📚 {t('المراجع الأكاديمية المعتمدة:', 'Verified Academic References:')}</p>
                                <div className="flex flex-wrap gap-3">
                                  {msg.sources.map((src: any, idx: number) => (
                                    <a key={idx} href={src.web?.uri || src.maps?.uri} target="_blank" rel="noopener noreferrer" className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl text-xs font-bold text-emerald-600 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-500 hover:text-white transition shadow-sm truncate max-w-[200px]">
-                                     🔗 {src.web?.title || t('رابط المصدر', 'Source Link')}
+                                     🔗 {src.web?.title || t('رابط المرجع', 'Reference Link')}
                                    </a>
                                  ))}
                                </div>
@@ -778,11 +772,10 @@ const App: React.FC = () => {
                  </div>
                )}
 
-               {/* Chat Input Area */}
                <div className="space-y-8 sticky bottom-4">
                   <div className="flex gap-4 md:gap-6 items-center">
                      <button onClick={handleJarvisChat} className="bg-emerald-600 text-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl text-3xl md:text-5xl active:scale-90 transition transform hover:rotate-12 hover:bg-emerald-700">🚀</button>
-                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("اسأل عن أبحاث في ASJP، تمارين، أو معلومات جزائرية...", "Ask about ASJP research, exercises...")} className="flex-1 bg-white dark:bg-gray-900 border-4 border-transparent focus:border-emerald-500 rounded-[2rem] md:rounded-[3rem] px-8 md:px-12 py-6 md:py-10 font-black text-lg md:text-3xl outline-none text-right dark:text-white shadow-2xl transition" />
+                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("اسأل جارفيس للحصول على مساعدة أكاديمية عميقة ومنظمة...", "Ask Jarvis for structured academic help...")} className="flex-1 bg-white dark:bg-gray-900 border-4 border-transparent focus:border-emerald-500 rounded-[2rem] md:rounded-[3rem] px-8 md:px-12 py-6 md:py-10 font-bold text-lg md:text-2xl outline-none text-right dark:text-white shadow-2xl transition" />
                   </div>
                </div>
             </div>
