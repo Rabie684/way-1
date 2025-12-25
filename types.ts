@@ -50,5 +50,6 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   text: string;
+  imageUrl?: string; // ميزة إرسال الصور
   timestamp: Date;
 }
