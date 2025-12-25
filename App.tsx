@@ -210,7 +210,7 @@ const App: React.FC = () => {
   const renderModal = (title: string, body: React.ReactNode, onConfirm: () => void, onClose: () => void) => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose}></div>
-      <div className="relative bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2rem] md:rounded-[4rem] p-6 md:p-12 shadow-2xl space-y-6 md:space-y-8 animate-in zoom-in duration-300">
+      <div className="relative bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl md:rounded-[4rem] p-6 md:p-12 shadow-2xl space-y-6 md:space-y-8 animate-in zoom-in duration-300">
         <h3 className="text-xl md:text-3xl font-black text-emerald-900 dark:text-emerald-400 text-center">{title}</h3>
         {body}
         <div className="flex gap-3 md:gap-4 pt-4">
@@ -323,7 +323,6 @@ const App: React.FC = () => {
 
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-950 text-right animate-in fade-in duration-700">
-        {/* Modals are responsive inside renderModal */}
         {showCreateChannel && renderModal(t("مادة جديدة", "New Course"), (
           <div className="space-y-4">
             <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder={t("اسم المادة", "Name")} className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white border dark:border-gray-700 outline-none"/>
@@ -487,7 +486,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'messages' && (
-            <div className="max-w-6xl mx-auto h-[75vh] md:h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-2xl md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-500">
+            <div className="max-w-6xl mx-auto h-[75vh] md:h-[80vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-2xl md:rounded-[4rem] shadow-2xl border dark:border-gray-800 overflow-hidden animate-in fade-in duration-700">
                {/* Contact List */}
                <div className={`w-full md:w-80 border-l dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950/50 flex flex-col ${activeChatUserId ? 'hidden md:flex' : 'flex'}`}>
                   <div className="p-5 md:p-8 border-b dark:border-gray-800 font-black text-xl md:text-2xl text-emerald-900 dark:text-emerald-400">{t('المحادثات', 'Messages')}</div>
@@ -654,7 +653,7 @@ const App: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-12 overflow-y-auto">
           {channelTab === 'pdf' && (
-            <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 animate-in fade-in duration-500">
+            <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 animate-in fade-in duration-700">
               {isProf && <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-2 md:border-8 border-dashed border-emerald-500/20 p-6 md:p-16 rounded-2xl md:rounded-[4.5rem] text-emerald-600 font-black text-lg md:text-3xl transition shadow-sm group">
                 <span className="block mb-1 md:mb-2 group-hover:scale-125 transition-transform text-3xl md:text-4xl">➕</span>
                 {t('إضافة محتوى', 'Add Content')}
@@ -722,14 +721,18 @@ const App: React.FC = () => {
                <div className="bg-emerald-900 p-8 md:p-20 rounded-2xl md:rounded-[5rem] text-white shadow-2xl text-center relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-32 h-32 md:w-80 md:h-80 bg-emerald-500/5 rounded-full -ml-16 md:-ml-40 -mt-16 md:-mt-40 animate-pulse"></div>
                   <h3 className="text-3xl md:text-7xl font-black mb-3 md:mb-6 tracking-tighter italic">Jarvis AI</h3>
-                  <p className="opacity-70 text-sm md:text-2xl font-bold">{t('مساعدك الأكاديمي الصارم.', 'Your strict academic assistant.')}</p>
+                  <div className="flex flex-col gap-1 items-center mb-2">
+                    <p className="opacity-80 text-xs md:text-xl font-black tracking-widest uppercase">WAY Startup Idea</p>
+                    <p className="opacity-60 text-[10px] md:text-sm font-bold">By: Rabie Hamr El Ain</p>
+                  </div>
+                  <p className="opacity-70 text-sm md:text-2xl font-bold">{t('مساعدك الأكاديمي الصارم لإعداد البحوث والخطط.', 'Your academic research & planning assistant.')}</p>
                </div>
                
                {isJarvisThinking && <div className="text-center text-emerald-700 dark:text-emerald-400 font-black animate-pulse text-lg md:text-3xl py-8 flex items-center justify-center gap-3 md:gap-6">
                   <div className="w-2 h-2 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-150"></div>
                   <div className="w-2 h-2 md:w-5 md:h-5 bg-emerald-600 rounded-full animate-bounce delay-300"></div>
-                  {t('جارفيس يراجع المصادر...', 'Jarvis is reviewing sources...')}
+                  {t('جارفيس يحلل المصادر الأكاديمية...', 'Jarvis is analyzing academic sources...')}
                </div>}
 
                {(jarvisResponse || jarvisChat.some(m => m.role === 'jarvis')) && (
@@ -747,11 +750,11 @@ const App: React.FC = () => {
                            </div>
                            {msg.role === 'jarvis' && msg.sources && msg.sources.length > 0 && (
                              <div className="w-full bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-xl md:rounded-3xl mt-2 space-y-3">
-                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-[10px] md:text-sm">📑 {t('المراجع المعتمدة:', 'Verified References:')}</p>
+                               <p className="font-black text-emerald-800 dark:text-emerald-400 text-[10px] md:text-sm">📑 {t('المراجع الجامعية الرسمية (ASJP/Scholar):', 'Official Academic References:')}</p>
                                <div className="flex flex-wrap gap-2 md:gap-3">
                                  {msg.sources.map((src: any, idx: number) => (
                                    <a key={idx} href={src.web?.uri || src.maps?.uri} target="_blank" rel="noopener noreferrer" className="bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg text-[8px] md:text-xs font-bold text-emerald-600 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-500 hover:text-white transition shadow-sm truncate max-w-[150px] md:max-w-[200px]">
-                                     🔗 {src.web?.title || t('مرجع', 'Ref')}
+                                     🔗 {src.web?.title || t('رابط المرجع', 'Reference')}
                                    </a>
                                  ))}
                                </div>
@@ -767,7 +770,7 @@ const App: React.FC = () => {
                <div className="space-y-6 sticky bottom-4 z-20">
                   <div className="flex gap-3 md:gap-6 items-center">
                      <button onClick={handleJarvisChat} className="bg-emerald-600 text-white p-4 md:p-8 rounded-xl md:rounded-[2.5rem] shadow-2xl text-2xl md:text-5xl active:scale-90 transition transform hover:rotate-6">🚀</button>
-                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("اسأل جارفيس...", "Ask Jarvis...")} className="flex-1 bg-white dark:bg-gray-900 border-2 border-transparent focus:border-emerald-500 rounded-xl md:rounded-[3rem] px-5 md:px-12 py-4 md:py-10 font-bold text-sm md:text-2xl outline-none text-right dark:text-white shadow-2xl transition" />
+                     <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder={t("أعد خطة بحث، اطلب مرجعاً من ASJP، أو نصيحة تعليمية...", "Research plan, ASJP reference, or academic advice...")} className="flex-1 bg-white dark:bg-gray-900 border-2 border-transparent focus:border-emerald-500 rounded-xl md:rounded-[3rem] px-5 md:px-12 py-4 md:py-10 font-bold text-sm md:text-2xl outline-none text-right dark:text-white shadow-2xl transition" />
                   </div>
                </div>
             </div>
