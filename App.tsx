@@ -44,13 +44,17 @@ const App: React.FC = () => {
   const jarvisEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const targetUniv = "جامعة الجزائر 1 - بن يوسف بن خدة";
+    // تحديث الجامعة المستهدفة حسب طلب المستخدم
+    const targetUniv = "جامعة ابن خلدون ملحقة قصر الشلالة";
     const targetFaculty = "كلية العلوم الاقتصادية";
+    
     const mockProfs: User[] = [
       { id: 'p5', firstName: 'بختة', lastName: 'بن الطاهر', specialty: 'الاقتصاد الجزئي', email: 'bentahar@univ.dz', role: 'professor', university: targetUniv, faculty: targetFaculty, walletBalance: 1250, avatar: '', isApproved: true, studentCount: 120, paymentMethod: 'bentahar.ccp@algeriepost.dz' },
       { id: 'p6', firstName: 'الأستاذ', lastName: 'ايت عيسى', specialty: 'الاقتصاد الكلي', email: 'aitissa@univ.dz', role: 'professor', university: targetUniv, faculty: targetFaculty, walletBalance: 850, avatar: '', isApproved: true, studentCount: 105 },
     ];
+    
     const mockStudent: User = { id: 's1', firstName: 'ربيع', lastName: 'حمر العين', email: 'rabieriri665@gmail.com', role: 'student', walletBalance: 2500, avatar: '', isApproved: true, phoneNumber: '0781723461', university: targetUniv, faculty: targetFaculty };
+    
     setUsers([...mockProfs, mockStudent]);
     setChannels([
       { id: 'c_b1', professorId: 'p5', name: 'الاقتصاد الجزئي', description: 'أساسيات الاقتصاد الجزئي للسنة الأولى.', price: 200, subscribers: [], content: [] },
@@ -324,7 +328,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-950 text-right">
         {/* Fixed Jarvis FAB accessible everywhere in dashboard */}
-        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-6 left-6 md:bottom-10 md:right-10 z-[110] w-16 h-16 md:w-20 md:h-20 bg-emerald-600 text-white rounded-full shadow-2xl flex flex-col items-center justify-center hover:scale-110 active:scale-95 transition-all animate-bounce border-4 border-white dark:border-gray-800">
+        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[110] w-16 h-16 md:w-20 md:h-20 bg-emerald-600 text-white rounded-full shadow-2xl flex flex-col items-center justify-center hover:scale-110 active:scale-95 transition-all animate-bounce border-4 border-white dark:border-gray-800">
            <span className="text-2xl md:text-3xl">✨</span>
            <span className="text-[7px] md:text-[9px] font-black uppercase hidden md:block">Jarvis</span>
         </button>
@@ -487,7 +491,7 @@ const App: React.FC = () => {
                       </div>
                       <div className="p-4 bg-white dark:bg-gray-900 border-t flex gap-2">
                          <button onClick={handleImageUpload} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-emerald-50 text-xl" title="إرسال صورة">📷</button>
-                         <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendPersonal()} placeholder="اكتب رسالة..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-5 py-2 outline-none border focus:border-emerald-500 transition" />
+                         <input value={chatInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendPersonal()} placeholder="اكتب رسالة..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-5 py-2 outline-none border focus:border-emerald-500 transition" />
                          <button onClick={() => handleSendPersonal()} className="bg-emerald-600 text-white px-6 rounded-xl font-black">إرسال</button>
                       </div>
                     </>
