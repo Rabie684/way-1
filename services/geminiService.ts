@@ -33,15 +33,21 @@ export const jarvisAsk = async (question: string) => {
     const ai = getJarvisAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `أجب على السؤال التالي بصفتك خبيراً في التعليم العالي بالجزائر: ${question}
-      
-      تنبيه: اعتمد فقط على البيانات، القوانين، والأمثلة الجزائرية. إذا كان السؤال عاماً، أسقطه على الواقع الجزائري.`,
+      contents: `بصفتك المساعد الأكاديمي الجزائري "جارفيس"، ابحث وأجب على السؤال التالي: ${question}. 
+      هام جداً: أعطِ الأولوية للمعلومات والأبحاث المنشورة في "منصة المجلة العلمية الجزائرية (ASJP)". 
+      إذا لم تجد المعلومة هناك، ابحث في المصادر الجامعية الجزائرية الرسمية الأخرى.`,
       config: {
-        systemInstruction: "أنت جارفيس، الذكاء الاصطناعي لمنصة WAY. إجاباتك يجب أن تكون دقيقة ومبنية على السياق الجزائري فقط. تحدث بلهجة مثقفة تجمع بين الفصحى وبعض المصطلحات الجزائرية المفهومة تعليمياً.",
+        tools: [{ googleSearch: {} }],
+        systemInstruction: "أنت جارفيس، الذكاء الاصطناعي لمنصة WAY. تخصصك هو البحث في المنشورات العلمية الجزائرية خاصة عبر ASJP. إجاباتك يجب أن تكون موثقة ومبنية على السياق الجزائري فقط. دائماً اذكر المصادر الجزائرية.",
       }
     });
-    return response.text;
+
+    const text = response.text;
+    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    
+    return { text, sources };
   } catch (error) {
-    return "لم أستطع معالجة طلبك، هل يمكنك المحاولة مجدداً؟";
+    console.error("Jarvis Ask Error:", error);
+    return { text: "لم أستطع معالجة طلبك، هل يمكنك المحاولة مجدداً؟", sources: [] };
   }
 };

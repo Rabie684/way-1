@@ -26,10 +26,22 @@ const ProfessorRank: React.FC<Props> = ({ studentCount, avatar, size = 'md' }) =
     lg: 'w-8 h-8'
   };
 
+  const userIconSize = {
+    sm: 'w-6 h-6',
+    md: 'w-10 h-10',
+    lg: 'w-14 h-14'
+  };
+
   return (
     <div className="relative flex flex-col items-center">
-      <div className={`rounded-full overflow-hidden border-2 border-white ${sizeClasses[size]} ${aura}`}>
-        <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+      <div className={`rounded-full overflow-hidden border-2 border-white flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${sizeClasses[size]} ${aura}`}>
+        {avatar ? (
+          <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          <svg className={`${userIconSize[size]} text-gray-400`} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
+        )}
       </div>
       
       {medal !== Medal.NONE && (
@@ -45,7 +57,7 @@ const ProfessorRank: React.FC<Props> = ({ studentCount, avatar, size = 'md' }) =
       )}
       
       {medal === Medal.KING && (
-        <span className="mt-2 text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+        <span className="mt-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full uppercase">
           الملك
         </span>
       )}
