@@ -47,14 +47,13 @@ const App: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showAddContent, setShowAddContent] = useState(false);
-  const [newChannelData, setNewChannelData] = useState({ name: '', description: '', price: 200 });
+  const [newChannelData, setNewChannelData] = useState({ name: '', department: '', description: '', price: 200 });
   const [newContentData, setNewContentData] = useState({ title: '', type: 'pdf' as 'pdf' | 'video' | 'image' });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const jarvisEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // تحديد الجامعة المطلوبة للأساتذة بن طاهر بختة وأيت عيسى
     const targetUniv = "جامعة ابن خلدون ملحقة قصر الشلالة";
     const targetFaculty = "كلية العلوم الاقتصادية";
     
@@ -67,8 +66,8 @@ const App: React.FC = () => {
     
     setUsers([...mockProfs, mockStudent]);
     setChannels([
-      { id: 'c_b1', professorId: 'p5', name: 'الاقتصاد الجزئي', description: 'أساسيات الاقتصاد الجزئي للسنة الأولى.', price: 200, subscribers: [], content: [] },
-      { id: 'c_a1', professorId: 'p6', name: 'الاقتصاد الكلي', description: 'تحليل المتغيرات الكلية.', price: 150, subscribers: [], content: [] }
+      { id: 'c_b1', professorId: 'p5', name: 'الاقتصاد الجزئي', department: 'قسم التسيير', description: 'أساسيات الاقتصاد الجزئي للسنة الأولى.', price: 200, subscribers: [], content: [] },
+      { id: 'c_a1', professorId: 'p6', name: 'الاقتصاد الكلي', department: 'قسم العلوم الاقتصادية', description: 'تحليل المتغيرات الكلية.', price: 150, subscribers: [], content: [] }
     ]);
   }, []);
 
@@ -95,7 +94,6 @@ const App: React.FC = () => {
     return en;
   };
 
-  // --- Auth Logic ---
   const handleRegister = (role: UserRole, data: { firstName: string, lastName: string, email: string, university?: string, faculty?: string }) => {
     const newUser: User = {
       id: 'u' + Date.now(),
@@ -115,7 +113,6 @@ const App: React.FC = () => {
     setView('dashboard');
   };
 
-  // --- Jarvis Live Audio Logic ---
   const decodeBase64 = (base64: string) => {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -280,6 +277,7 @@ const App: React.FC = () => {
       id: 'c' + Date.now(),
       professorId: currentUser.id,
       name: newChannelData.name,
+      department: newChannelData.department,
       description: newChannelData.description,
       price: newChannelData.price,
       subscribers: [],
@@ -287,7 +285,7 @@ const App: React.FC = () => {
     };
     setChannels(prev => [...prev, newChan]);
     setShowCreateChannel(false);
-    setNewChannelData({ name: '', description: '', price: 200 });
+    setNewChannelData({ name: '', department: '', description: '', price: 200 });
   };
 
   const subscribe = (chanId: string) => {
@@ -387,10 +385,13 @@ const App: React.FC = () => {
     <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose}></div>
       <div className="relative bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 animate-in zoom-in">
-        <h3 className="text-2xl font-black text-emerald-900 dark:text-emerald-400 text-center">{title}</h3>
+        <div className="flex justify-between items-center mb-4">
+           <h3 className="text-2xl font-black text-emerald-900 dark:text-emerald-400">{title}</h3>
+           <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition">✕</button>
+        </div>
         {body}
         <div className="flex gap-4 pt-4">
-          <button onClick={onConfirm} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">حفظ</button>
+          <button onClick={onConfirm} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition">حفظ</button>
           <button onClick={onClose} className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-500 py-4 rounded-2xl font-black">إلغاء</button>
         </div>
       </div>
@@ -490,6 +491,27 @@ const App: React.FC = () => {
         </button>
         {renderJarvisOverlay()}
 
+        {showCreateChannel && renderModal("إنشاء قناة/مادة جديدة", (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-black text-gray-500">اسم المادة</label>
+              <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="مثلاً: الاقتصاد الجزئي" className="w-full bg-gray-50 p-4 rounded-xl border outline-none font-bold dark:bg-gray-800 dark:text-white dark:border-gray-700" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black text-gray-500">اسم القسم</label>
+              <input value={newChannelData.department} onChange={e => setNewChannelData({...newChannelData, department: e.target.value})} placeholder="مثلاً: قسم التسيير" className="w-full bg-gray-50 p-4 rounded-xl border outline-none font-bold dark:bg-gray-800 dark:text-white dark:border-gray-700" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black text-gray-500">وصف المادة</label>
+              <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="وصف موجز لما سيجده الطالب في هذه القناة..." className="w-full bg-gray-50 p-4 rounded-xl border outline-none font-bold h-24 dark:bg-gray-800 dark:text-white dark:border-gray-700" />
+            </div>
+            <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-2xl">
+              <span className="font-bold dark:text-white text-sm">سعر الاشتراك (دج)</span>
+              <input type="number" value={newChannelData.price} onChange={e => setNewChannelData({...newChannelData, price: Number(e.target.value)})} className="w-24 bg-white dark:bg-gray-800 p-2 rounded-xl border text-center font-black dark:text-white" />
+            </div>
+          </div>
+        ), handleCreateChannel, () => setShowCreateChannel(false))}
+
         <aside className={`${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} fixed md:static inset-y-0 right-0 w-72 bg-white dark:bg-gray-900 border-l dark:border-gray-800 p-8 flex flex-col gap-8 shadow-xl z-50 transition-transform`}>
           <div className="flex justify-between items-center md:justify-center">
             <h2 className="text-3xl font-black text-emerald-900 dark:text-emerald-400">WAY</h2>
@@ -507,9 +529,25 @@ const App: React.FC = () => {
         <main className="flex-1 p-4 md:p-12 overflow-y-auto">
           {activeTab === 'home' && (
             <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-               <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white leading-tight">
-                 {t(`أهلاً بك، ${currentUser.firstName}`, `Welcome, ${currentUser.firstName}`, `Bienvenue, ${currentUser.firstName}`)} ✨
-               </h1>
+               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white leading-tight">
+                    {t(`أهلاً بك، ${currentUser.firstName}`, `Welcome, ${currentUser.firstName}`, `Bienvenue, ${currentUser.firstName}`)} ✨
+                  </h1>
+                  {isProf && (
+                    <div className="bg-white dark:bg-gray-900 px-6 py-3 rounded-2xl border dark:border-gray-800 flex items-center gap-4 shadow-sm">
+                       <div className="text-center">
+                          <p className="text-[10px] font-black text-gray-400 uppercase">إجمالي الطلاب</p>
+                          <p className="text-xl font-black text-emerald-600">{currentUser.studentCount || 0}</p>
+                       </div>
+                       <div className="w-px h-8 bg-gray-100 dark:bg-gray-800"></div>
+                       <div className="text-center">
+                          <p className="text-[10px] font-black text-gray-400 uppercase">القنوات</p>
+                          <p className="text-xl font-black text-emerald-600">{channels.filter(c => c.professorId === currentUser.id).length}</p>
+                       </div>
+                    </div>
+                  )}
+               </div>
+
                {!isProf ? (
                  <>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 shadow-sm">
@@ -530,14 +568,14 @@ const App: React.FC = () => {
                    </div>
                    {(filterUniv || currentUser.university) && (filterFaculty || currentUser.faculty) && (
                      <div className="space-y-6">
-                        <h3 className="font-black text-emerald-700 dark:text-emerald-400">الأساتذة المتاحون في {filterUniv || currentUser.university}:</h3>
+                        <h3 className="font-black text-emerald-700 dark:text-emerald-400">الأساتذة المتاحون:</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                            {users.filter(u => u.role === 'professor' && u.university === (filterUniv || currentUser.university) && u.faculty === (filterFaculty || currentUser.faculty)).map(prof => (
                              <div key={prof.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm hover:shadow-md transition text-center space-y-4">
                                 <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="lg" />
                                 <h4 className="font-black dark:text-white">{prof.firstName} {prof.lastName}</h4>
                                 <div className="flex gap-2">
-                                   <button onClick={() => setSelectedProfId(prof.id)} className="flex-1 bg-emerald-600 text-white py-2 rounded-xl text-xs font-black">المواد</button>
+                                   <button onClick={() => setSelectedProfId(prof.id)} className="flex-1 bg-emerald-600 text-white py-2 rounded-xl text-xs font-black hover:bg-emerald-700 transition">المواد</button>
                                    <button onClick={() => { setActiveChatUserId(prof.id); setActiveTab('messages'); }} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-lg hover:bg-emerald-50 transition">💬</button>
                                 </div>
                              </div>
@@ -549,7 +587,13 @@ const App: React.FC = () => {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-5">
                         {channels.filter(c => c.professorId === selectedProfId).map(chan => (
                           <div key={chan.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm group">
-                             <h4 className="font-black text-xl mb-4 group-hover:text-emerald-600 transition dark:text-white">{chan.name}</h4>
+                             <div className="flex justify-between items-start mb-4">
+                                <div>
+                                   <h4 className="font-black text-xl group-hover:text-emerald-600 transition dark:text-white">{chan.name}</h4>
+                                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{chan.department || 'عام'}</p>
+                                </div>
+                                <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-black">{chan.subscribers.length} طالب</span>
+                             </div>
                              <button onClick={() => chan.subscribers.includes(currentUser.id) ? (setSelectedChannel(chan), setView('channel-view')) : subscribe(chan.id)} className="w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 py-3 rounded-xl font-black hover:bg-emerald-600 hover:text-white transition">
                                {chan.subscribers.includes(currentUser.id) ? 'دخول القناة' : `اشتراك (${chan.price} دج)`}
                              </button>
@@ -560,20 +604,58 @@ const App: React.FC = () => {
                  </>
                ) : (
                  <div className="space-y-6">
-                    <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition">+ إنشاء قناة جديدة</button>
+                    <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition flex items-center gap-3">
+                       <span className="text-2xl">➕</span> إنشاء قناة جديدة (مادة)
+                    </button>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                        {channels.filter(c => c.professorId === currentUser.id).map(c => (
-                         <div key={c.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm">
-                            <h4 className="font-black text-xl mb-4 dark:text-white">{c.name}</h4>
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs font-bold opacity-50 dark:text-gray-400">{c.subscribers.length} مشترك</span>
-                              <button onClick={() => { setSelectedChannel(c); setView('channel-view'); }} className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-black">إدارة</button>
+                         <div key={c.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm hover:border-emerald-500 transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                               <div>
+                                  <h4 className="font-black text-xl dark:text-white">{c.name}</h4>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase">{c.department || 'بدون قسم'}</p>
+                               </div>
+                               <div className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] px-2 py-1 rounded-lg font-black">
+                                  {c.subscribers.length} طالب
+                               </div>
+                            </div>
+                            <div className="pt-4 border-t dark:border-gray-800">
+                               <button onClick={() => { setSelectedChannel(c); setView('channel-view'); }} className="w-full bg-emerald-600 text-white px-6 py-2 rounded-xl font-black hover:bg-emerald-700 transition">إدارة القناة</button>
                             </div>
                          </div>
                        ))}
+                       {channels.filter(c => c.professorId === currentUser.id).length === 0 && (
+                         <div className="col-span-full py-20 text-center opacity-30 border-2 border-dashed rounded-[3rem] dark:border-gray-800">
+                            <span className="text-6xl mb-4 block">📚</span>
+                            <p className="font-black text-xl">لا توجد لديك قنوات تعليمية بعد، ابدأ بإنشاء واحدة!</p>
+                         </div>
+                       )}
                     </div>
                  </div>
                )}
+            </div>
+          )}
+
+          {activeTab === 'my-channels' && (
+            <div className="max-w-5xl mx-auto space-y-6">
+               <h2 className="text-3xl font-black dark:text-white">قنواتي المشترك بها</h2>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {channels.filter(c => c.subscribers.includes(currentUser.id)).map(chan => (
+                    <div key={chan.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                       <div className="text-right w-full md:w-auto">
+                          <h4 className="font-black text-xl dark:text-white">{chan.name}</h4>
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">{chan.department || 'عام'}</p>
+                       </div>
+                       <button onClick={() => { setSelectedChannel(chan); setView('channel-view'); }} className="w-full md:w-auto bg-emerald-600 text-white px-10 py-3 rounded-xl font-black hover:bg-emerald-700 transition">دخول</button>
+                    </div>
+                  ))}
+                  {channels.filter(c => c.subscribers.includes(currentUser.id)).length === 0 && (
+                    <div className="col-span-full py-20 text-center opacity-30">
+                       <span className="text-6xl mb-4 block">📡</span>
+                       <p className="font-black text-xl dark:text-gray-100">لم تشترك في أي قناة بعد.</p>
+                    </div>
+                  )}
+               </div>
             </div>
           )}
 
@@ -708,7 +790,10 @@ const App: React.FC = () => {
               {isProf ? 'بدء محاضرة Meet' : 'دخول المحاضرة'}
             </button>
             <div className="flex items-center gap-3">
-               <h2 className="font-black text-xl text-emerald-900 dark:text-emerald-400 truncate max-w-[200px]">{selectedChannel.name}</h2>
+               <div className="text-right">
+                  <h2 className="font-black text-xl text-emerald-900 dark:text-emerald-400 truncate max-w-[200px]">{selectedChannel.name}</h2>
+                  <p className="text-[10px] font-bold text-gray-400">{selectedChannel.department || 'عام'}</p>
+               </div>
                <button onClick={() => setView('dashboard')} className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition dark:text-white">✕</button>
             </div>
           </div>

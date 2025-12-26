@@ -17,6 +17,7 @@ export interface User {
   role: UserRole;
   university?: string;
   faculty?: string;
+  department?: string;
   specialty?: string;
   walletBalance: number;
   avatar: string;
@@ -31,6 +32,7 @@ export interface Channel {
   id: string;
   professorId: string;
   name: string;
+  department?: string;      // حقل اسم القسم
   description: string;
   price: number;
   subscribers: string[];
