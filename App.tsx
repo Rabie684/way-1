@@ -7,10 +7,13 @@ import { summarizeContent, jarvisAsk, JARVIS_SYSTEM_INSTRUCTION, getJarvisAI } f
 import { Modality } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase Configuration
+// Supabase Configuration with safety check
 const supabaseUrl = 'https://xvcqkdytqbqkdxyiwmzx.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY || ''; // Assume this is provided by the environment
-const supabase = createClient(supabaseUrl, supabaseKey);
+// استخدام مفتاح API العام في حال لم يتوفر مفتاح خاص بـ Supabase لتفادي انهيار التطبيق
+const supabaseKey = process.env.SUPABASE_KEY || process.env.API_KEY || ''; 
+
+// تهيئة العميل فقط إذا كان المفتاح موجوداً لتجنب خطأ "supabaseKey is required"
+const supabase = supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const App: React.FC = () => {
   // Core State
@@ -65,6 +68,7 @@ const App: React.FC = () => {
   // Initialize Data and Check Auth Session
   useEffect(() => {
     const checkUser = async () => {
+      if (!supabase) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: profile } = await supabase
@@ -80,12 +84,16 @@ const App: React.FC = () => {
     };
     checkUser();
 
-    // Mock initial data (could be fetched from Supabase in production)
-    const targetUniv = "جامعة ابن خلدون ملحقة قصر الشلالة";
-    const targetFaculty = "كلية العلوم الاقتصادية";
+    // Mock initial data
     setChannels([
       { id: 'c_b1', professorId: 'p5', name: 'الاقتصاد الجزئي', department: 'قسم التسيير', description: 'أساسيات الاقتصاد الجزئي للسنة الأولى.', price: 200, subscribers: [], content: [] },
       { id: 'c_a1', professorId: 'p6', name: 'الاقتصاد الكلي', department: 'قسم العلوم الاقتصادية', description: 'تحليل المتغيرات الكلية.', price: 150, subscribers: [], content: [] }
+    ]);
+
+    // Mock Professors for discovery
+    setUsers([
+      { id: 'p5', firstName: 'بختة', lastName: 'بن الطاهر', email: 'bentahar@univ.dz', role: 'professor', university: 'جامعة ابن خلدون ملحقة قصر الشلالة', faculty: 'كلية العلوم الاقتصادية', walletBalance: 0, avatar: '', isApproved: true, studentCount: 120 },
+      { id: 'p6', firstName: 'أيت عيسى', lastName: '', email: 'aitissa@univ.dz', role: 'professor', university: 'جامعة ابن خلدون ملحقة قصر الشلالة', faculty: 'كلية العلوم الاقتصادية', walletBalance: 0, avatar: '', isApproved: true, studentCount: 105 },
     ]);
   }, []);
 
@@ -99,9 +107,16 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   const handleRegister = async (role: UserRole, data: any) => {
+    if (!supabase) {
+      // Fallback for demo if no Supabase Key
+      const mockUser = { ...data, id: 'mock-' + Date.now(), role, walletBalance: role === 'student' ? 1000 : 0, isApproved: true, studentCount: 0, avatar: '' };
+      setCurrentUser(mockUser);
+      setView('dashboard');
+      return;
+    }
+
     setLoading(true);
     try {
-      // 1. Sign up user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -109,7 +124,6 @@ const App: React.FC = () => {
 
       if (authError) throw authError;
 
-      // 2. Create user profile in 'users' table
       const newUserProfile = {
         id: authData.user?.id,
         firstName: data.firstName,
@@ -124,17 +138,14 @@ const App: React.FC = () => {
         avatar: '',
       };
 
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert([newUserProfile]);
-
+      const { error: dbError } = await supabase.from('users').insert([newUserProfile]);
       if (dbError) throw dbError;
 
       setCurrentUser(newUserProfile as User);
       setView('dashboard');
-      alert("تم التسجيل بنجاح! مرحبا بك في WAY.");
+      alert("تم التسجيل بنجاح!");
     } catch (err: any) {
-      alert("خطأ في التسجيل: " + (err.message || "حاول مرة أخرى"));
+      alert("خطأ: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -146,26 +157,39 @@ const App: React.FC = () => {
     const email = target.email.value;
     const password = target.password.value;
     
+    if (!supabase) {
+      alert("خدمة Supabase غير متصلة. يرجى استخدام التسجيل السريع.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-        
+      const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
       if (profile) {
         setCurrentUser(profile);
         setView('dashboard');
       }
     } catch (err: any) {
-      alert("خطأ في تسجيل الدخول: " + err.message);
+      alert("خطأ: " + err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const decodeBase64 = (base64: string) => {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  };
+
+  const encodeBase64 = (bytes: Uint8Array) => {
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   };
 
   const startJarvisLive = async () => {
@@ -207,11 +231,9 @@ const App: React.FC = () => {
               const buffer = audioContextRef.current.createBuffer(1, int16.length, 24000);
               const channel = buffer.getChannelData(0);
               for (let i = 0; i < int16.length; i++) channel[i] = int16[i] / 32768.0;
-              
               const source = audioContextRef.current.createBufferSource();
               source.buffer = buffer;
               source.connect(audioContextRef.current.destination);
-              
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioContextRef.current.currentTime);
               source.start(nextStartTimeRef.current);
               nextStartTimeRef.current += buffer.duration;
@@ -227,27 +249,6 @@ const App: React.FC = () => {
     }
   };
 
-  const decodeBase64 = (base64: string) => {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  };
-
-  const encodeBase64 = (bytes: Uint8Array) => {
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  };
-
-  const stopJarvisLive = () => {
-    if (liveSessionRef.current) {
-      liveSessionRef.current.close();
-      liveSessionRef.current = null;
-    }
-    setIsLiveActive(false);
-  };
-
   const handleJarvisChat = async () => {
     if (!jarvisInput.trim()) return;
     const userMsg = jarvisInput;
@@ -259,69 +260,11 @@ const App: React.FC = () => {
     setIsJarvisThinking(false);
   };
 
-  const handleJarvisSummarize = async (item: ContentItem) => {
-    setIsJarvisThinking(true);
-    setIsJarvisOpen(true);
-    setJarvisChat(prev => [...prev, { role: 'user', text: `يا جارفيس، لخصلي هاد المطلب: ${item.title}` }]);
-    const summary = await summarizeContent(item.title, item.type);
-    setJarvisChat(prev => [...prev, { role: 'jarvis', text: summary || '...' }]);
-    setIsJarvisThinking(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      let detectedType: 'pdf' | 'video' | 'image' | 'text' = 'pdf';
-      if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) detectedType = 'image';
-      else if (['mp4', 'webm', 'mov', 'avi'].includes(ext || '')) detectedType = 'video';
-      else if (['pdf'].includes(ext || '')) detectedType = 'pdf';
-      setNewContentData({ ...newContentData, title: file.name, type: detectedType as any });
-    }
-  };
-
-  const handleAddContent = () => {
-    if (!newContentData.title.trim() || !selectedChannel) return;
-    const fileUrl = selectedFile ? URL.createObjectURL(selectedFile) : '#';
-    const newItem: ContentItem = { id: 'i' + Date.now(), type: newContentData.type, title: newContentData.title, url: fileUrl, createdAt: new Date() };
-    const updatedChannels = channels.map(c => c.id === selectedChannel.id ? { ...c, content: [...c.content, newItem] } : c);
-    setChannels(updatedChannels);
-    setSelectedChannel(updatedChannels.find(c => c.id === selectedChannel.id) || null);
-    setShowAddContent(false);
-    setNewContentData({ title: '', type: 'pdf' });
-    setSelectedFile(null);
-  };
-
-  const handleSendPersonal = () => {
-    if (!chatInput.trim() || !currentUser || !activeChatUserId) return;
-    const key = [currentUser.id, activeChatUserId].sort().join('_');
-    const msg: ChatMessage = { id: Date.now().toString(), senderId: currentUser.id, senderName: currentUser.firstName, text: chatInput, timestamp: new Date() };
-    setPersonalChats(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
-    setChatInput('');
-  };
-
-  const handleSendBroadcast = () => {
-    if (!chatInput.trim() || !selectedChannel || !currentUser) return;
-    const newMessage: ChatMessage = { id: 'broadcast-' + Date.now(), senderId: currentUser.id, senderName: `${currentUser.firstName} ${currentUser.lastName}`, text: chatInput, timestamp: new Date() };
-    setBroadcastMessages(prev => ({ ...prev, [selectedChannel.id]: [...(prev[selectedChannel.id] || []), newMessage] }));
-    setChatInput('');
-  };
-
-  const subscribe = (chanId: string) => {
-    if (!currentUser) return;
-    const chan = channels.find(c => c.id === chanId);
-    if (!chan || currentUser.walletBalance < chan.price) return alert('الرصيد لا يكفي');
-    setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance - chan.price });
-    setChannels(prev => prev.map(c => c.id === chanId ? { ...c, subscribers: [...c.subscribers, currentUser.id] } : c));
-    alert('تم الاشتراك بنجاح!');
-  };
-
   const renderJarvisOverlay = () => (
     <div className={`fixed inset-0 z-[120] flex items-end md:items-center justify-center p-0 md:p-6 transition-all duration-500 ${isJarvisOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-md" onClick={() => setIsJarvisOpen(false)}></div>
       <div className="relative bg-white dark:bg-gray-900 w-full md:max-w-4xl h-[95vh] md:h-[85vh] rounded-t-[3rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-20 duration-500">
-        <div className="p-6 md:p-8 bg-gradient-to-r from-emerald-600 to-green-800 text-white flex items-center justify-between shadow-lg">
+        <div className="p-6 md:p-8 bg-emerald-600 text-white flex items-center justify-between shadow-lg">
            <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl animate-pulse">✨</div>
               <div>
@@ -358,7 +301,7 @@ const App: React.FC = () => {
         </div>
         <div className="p-4 md:p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shadow-2xl mb-safe">
            <div className="flex gap-2 items-center">
-              <button onClick={isLiveActive ? stopJarvisLive : startJarvisLive} className={`p-4 rounded-2xl shadow-xl transition-all active:scale-90 ${isLiveActive ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}>{isLiveActive ? '⏹️' : '🎙️'}</button>
+              <button onClick={isLiveActive ? () => liveSessionRef.current?.close() : startJarvisLive} className={`p-4 rounded-2xl shadow-xl transition-all active:scale-90 ${isLiveActive ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}>{isLiveActive ? '⏹️' : '🎙️'}</button>
               <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder="اسأل جارفيس..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-3 font-bold text-sm outline-none dark:text-white border-2 border-transparent focus:border-emerald-500 transition-all shadow-inner" />
               <button onClick={handleJarvisChat} className="bg-emerald-600 text-white p-4 rounded-2xl shadow-xl active:scale-90 transition">🚀</button>
            </div>
@@ -386,8 +329,8 @@ const App: React.FC = () => {
   if (view === 'register-student' || view === 'register-prof') {
     const isProfReg = view === 'register-prof';
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 space-y-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 space-y-6">
           <h2 className="text-2xl font-black text-emerald-600 text-center">حساب جديد - {isProfReg ? 'أستاذ' : 'طالب'}</h2>
           <form className="space-y-4" onSubmit={(e: any) => { 
             e.preventDefault(); 
@@ -402,18 +345,18 @@ const App: React.FC = () => {
             handleRegister(isProfReg ? 'professor' : 'student', data); 
           }}>
             <div className="grid grid-cols-2 gap-4">
-              <input name="fname" placeholder="الاسم" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
-              <input name="lname" placeholder="اللقب" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
+              <input name="fname" placeholder="الاسم" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
+              <input name="lname" placeholder="اللقب" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
             </div>
-            <input name="email" type="email" placeholder="البريد الإلكتروني" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
-            <input name="password" type="password" placeholder="كلمة المرور" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
+            <input name="email" type="email" placeholder="البريد الإلكتروني" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
+            <input name="password" type="password" placeholder="كلمة المرور" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
             {isProfReg && (
               <>
-                <select name="univ" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold">
+                <select name="univ" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white">
                   <option value="">اختر الجامعة...</option>
                   {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
-                <select name="faculty" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold">
+                <select name="faculty" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white">
                   <option value="">اختر الكلية...</option>
                   {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
@@ -431,12 +374,12 @@ const App: React.FC = () => {
 
   if (view === 'login') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 space-y-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 space-y-6">
           <h2 className="text-2xl font-black text-emerald-600 text-center">تسجيل الدخول</h2>
           <form className="space-y-4" onSubmit={handleLogin}>
-            <input name="email" type="email" placeholder="البريد الإلكتروني" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
-            <input name="password" type="password" placeholder="كلمة المرور" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold" />
+            <input name="email" type="email" placeholder="البريد الإلكتروني" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
+            <input name="password" type="password" placeholder="كلمة المرور" required className="w-full bg-gray-50 dark:bg-gray-700 p-4 rounded-xl outline-none border focus:border-emerald-500 transition font-bold dark:text-white" />
             <button type="submit" disabled={loading} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg disabled:opacity-50">
               {loading ? "جاري الدخول..." : "دخول"}
             </button>
@@ -464,6 +407,7 @@ const App: React.FC = () => {
 
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-950 text-right relative overflow-x-hidden">
+        {/* Desktop Sidebar */}
         <aside className="hidden md:flex w-72 bg-white dark:bg-gray-900 border-l dark:border-gray-800 p-8 flex-col gap-8 shadow-xl z-50">
           <div className="flex justify-center"><h2 className="text-3xl font-black text-emerald-600 dark:text-emerald-400">WAY</h2></div>
           <nav className="flex flex-col gap-2">
@@ -475,6 +419,7 @@ const App: React.FC = () => {
           </nav>
         </aside>
 
+        {/* Mobile Bottom Navigation */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 z-[100] flex justify-around items-center p-2 mb-safe shadow-2xl">
            {mobileTabs.map(tab => (
              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex flex-col items-center gap-1 p-3 transition-all ${activeTab === tab.id ? 'text-emerald-600 scale-110' : 'text-gray-400'}`}>
@@ -484,6 +429,7 @@ const App: React.FC = () => {
            ))}
         </nav>
 
+        {/* Jarvis FAB */}
         <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-24 right-4 md:bottom-10 md:right-10 z-[110] w-14 h-14 md:w-20 md:h-20 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center animate-bounce border-4 border-white dark:border-gray-800 transition-all active:scale-90">
            <span className="text-2xl md:text-3xl">✨</span>
         </button>
@@ -494,8 +440,9 @@ const App: React.FC = () => {
             <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
                <div className="flex flex-col gap-2">
                   <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white">أهلاً بك، {currentUser.firstName} 👋</h1>
-                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest">{currentUser.university}</p>
+                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest">{currentUser.university || 'مستخدم جديد'}</p>
                </div>
+               
                {isProf && (
                  <div className="bg-emerald-600 text-white p-6 rounded-3xl shadow-xl flex items-center justify-around">
                     <div className="text-center">
@@ -509,11 +456,32 @@ const App: React.FC = () => {
                     </div>
                  </div>
                )}
-               {/* Dashboard content based on tabs... */}
+
+               {!isProf && (
+                 <div className="space-y-6">
+                    <h3 className="font-black text-lg px-2 flex items-center gap-2">
+                       <span className="w-2 h-6 bg-emerald-600 rounded-full"></span>
+                       الأساتذة المتاحون
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       {users.filter(u => u.role === 'professor').map(prof => (
+                         <div key={prof.id} className="bg-white dark:bg-gray-800 p-6 rounded-3xl border dark:border-gray-700 shadow-sm text-center space-y-4 hover:border-emerald-500 transition-all">
+                            <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="md" />
+                            <h4 className="font-black dark:text-white">{prof.firstName} {prof.lastName}</h4>
+                            <div className="flex gap-2">
+                               <button onClick={() => setSelectedChannel(channels.find(c => c.professorId === prof.id) || null)} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl text-xs font-black">المواد</button>
+                               <button className="p-3 bg-gray-50 dark:bg-gray-700 rounded-xl text-xl">💬</button>
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+               )}
             </div>
           )}
+
           {activeTab === 'profile' && (
-            <div className="max-w-2xl mx-auto bg-white dark:bg-gray-900 p-8 rounded-3xl border dark:border-gray-800 shadow-sm space-y-8">
+            <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-3xl border dark:border-gray-700 shadow-sm space-y-8">
                <div className="flex flex-col items-center gap-4 text-center">
                   <ProfessorRank avatar={currentUser.avatar} studentCount={currentUser.studentCount || 0} size="lg" />
                   <div className="space-y-1">
@@ -522,7 +490,7 @@ const App: React.FC = () => {
                     <span className="inline-block bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 px-4 py-2 rounded-full text-[10px] font-black tracking-tighter uppercase mt-2">{currentUser.role === 'professor' ? '🛡️ أستاذ معتمد' : '🎓 طالب مفعل'}</span>
                   </div>
                </div>
-               <button onClick={async () => { await supabase.auth.signOut(); setCurrentUser(null); setView('landing'); }} className="w-full text-red-500 font-black hover:bg-red-50 dark:hover:bg-red-950/20 py-4 rounded-2xl transition-all border border-red-100 dark:border-red-900/20">تسجيل الخروج</button>
+               <button onClick={async () => { if(supabase) await supabase.auth.signOut(); setCurrentUser(null); setView('landing'); }} className="w-full text-red-500 font-black hover:bg-red-50 dark:hover:bg-red-950/20 py-4 rounded-2xl transition-all border border-red-100 dark:border-red-900/20">تسجيل الخروج</button>
             </div>
           )}
         </main>
@@ -530,7 +498,7 @@ const App: React.FC = () => {
     );
   }
 
-  return null;
+  return <div className="min-h-screen bg-emerald-900 flex items-center justify-center text-white font-black text-2xl">جاري التحميل...</div>;
 };
 
 export default App;
