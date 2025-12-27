@@ -32,11 +32,12 @@ export interface Channel {
   id: string;
   professorId: string;
   name: string;
-  department?: string;      // حقل اسم القسم
+  department?: string;
   description: string;
   price: number;
   subscribers: string[];
   content: ContentItem[];
+  meetingUrl?: string; // رابط غوغل ميت
 }
 
 export interface ContentItem {
@@ -52,6 +53,6 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   text: string;
-  imageUrl?: string; // ميزة إرسال الصور
+  imageUrl?: string;
   timestamp: Date;
 }
