@@ -21,6 +21,7 @@ export const JARVIS_SYSTEM_INSTRUCTION = `أنت مساعد البحث الأك�
 3. التوثيق: يمنع تقديم أي معلومة بدون مصدر.
 4. الهيكلية: الإجابات منظمة في جداول أو نقاط مرقمة بأسلوب أكاديمي رصين.`;
 
+// Fix: Summarization uses gemini-3-flash-preview as per guidelines for basic text tasks
 export const summarizeContent = async (title: string, type: string) => {
   try {
     const ai = getJarvisAI();
@@ -38,11 +39,12 @@ export const summarizeContent = async (title: string, type: string) => {
   }
 };
 
+// Fix: Research assistant tasks are complex, so gemini-3-pro-preview is preferred for better reasoning and grounding
 export const jarvisAsk = async (question: string) => {
   try {
     const ai = getJarvisAI();
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `المطلب الأكاديمي: ${question}`,
       config: {
         tools: [{ googleSearch: {} }],
@@ -51,6 +53,7 @@ export const jarvisAsk = async (question: string) => {
     });
 
     const text = response.text;
+    // Fix: Correctly extracting grounding chunks for displaying academic sources on the UI
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     
     return { text, sources };
