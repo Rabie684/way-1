@@ -35,7 +35,11 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef(0);
 
-  // Other States
+  // File Upload State
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Other UI States
   const [filterUniv, setFilterUniv] = useState<string>('');
   const [filterFaculty, setFilterFaculty] = useState<string>('');
   const [selectedProfId, setSelectedProfId] = useState<string | null>(null);
@@ -211,11 +215,48 @@ const App: React.FC = () => {
     setIsJarvisThinking(false);
   };
 
-  const getChatKey = (id1: string, id2: string) => [id1, id2].sort().join('_');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      let detectedType: 'pdf' | 'video' | 'image' | 'text' = 'pdf';
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) detectedType = 'image';
+      else if (['mp4', 'webm', 'mov', 'avi'].includes(ext || '')) detectedType = 'video';
+      else if (['pdf'].includes(ext || '')) detectedType = 'pdf';
+      
+      setNewContentData({
+        ...newContentData,
+        title: file.name,
+        type: detectedType as any
+      });
+    }
+  };
+
+  const handleAddContent = () => {
+    if (!newContentData.title.trim() || !selectedChannel) return;
+    const fileUrl = selectedFile ? URL.createObjectURL(selectedFile) : '#';
+    const newItem: ContentItem = {
+      id: 'i' + Date.now(),
+      type: newContentData.type,
+      title: newContentData.title,
+      url: fileUrl, 
+      createdAt: new Date()
+    };
+    const updatedChannels = channels.map(c => 
+      c.id === selectedChannel.id ? { ...c, content: [...c.content, newItem] } : c
+    );
+    setChannels(updatedChannels);
+    setSelectedChannel(updatedChannels.find(c => c.id === selectedChannel.id) || null);
+    setShowAddContent(false);
+    setNewContentData({ title: '', type: 'pdf' });
+    setSelectedFile(null);
+  };
 
   const handleSendPersonal = (imageUrl?: string) => {
     if ((!chatInput.trim() && !imageUrl) || !currentUser || !activeChatUserId) return;
-    const key = getChatKey(currentUser.id, activeChatUserId);
+    const key = [currentUser.id, activeChatUserId].sort().join('_');
     const msg: ChatMessage = { 
       id: Date.now().toString(), 
       senderId: currentUser.id, 
@@ -226,11 +267,6 @@ const App: React.FC = () => {
     };
     setPersonalChats(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
     setChatInput('');
-  };
-
-  const handleImageUpload = () => {
-    const url = prompt(t("أدخل رابط الصورة:", "Enter image URL:", "Entrez l'URL de l'image :"), "https://picsum.photos/400/300");
-    if (url) handleSendPersonal(url);
   };
 
   const handleSendBroadcast = () => {
@@ -249,41 +285,6 @@ const App: React.FC = () => {
     setChatInput('');
   };
 
-  const handleAddContent = () => {
-    if (!newContentData.title.trim() || !selectedChannel) return;
-    const newItem: ContentItem = {
-      id: 'i' + Date.now(),
-      type: newContentData.type,
-      title: newContentData.title,
-      url: '#', 
-      createdAt: new Date()
-    };
-    const updatedChannels = channels.map(c => 
-      c.id === selectedChannel.id ? { ...c, content: [...c.content, newItem] } : c
-    );
-    setChannels(updatedChannels);
-    setSelectedChannel(updatedChannels.find(c => c.id === selectedChannel.id) || null);
-    setShowAddContent(false);
-    setNewContentData({ title: '', type: 'pdf' });
-  };
-
-  const handleCreateChannel = () => {
-    if (!newChannelData.name.trim() || !currentUser) return;
-    const newChan: Channel = {
-      id: 'c' + Date.now(),
-      professorId: currentUser.id,
-      name: newChannelData.name,
-      department: newChannelData.department,
-      description: newChannelData.description,
-      price: newChannelData.price,
-      subscribers: [],
-      content: []
-    };
-    setChannels(prev => [...prev, newChan]);
-    setShowCreateChannel(false);
-    setNewChannelData({ name: '', department: '', description: '', price: 200 });
-  };
-
   const subscribe = (chanId: string) => {
     if (!currentUser) return;
     const chan = channels.find(c => c.id === chanId);
@@ -298,12 +299,12 @@ const App: React.FC = () => {
     <div className={`fixed inset-0 z-[120] flex items-end md:items-center justify-center p-0 md:p-6 transition-all duration-500 ${isJarvisOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-emerald-950/60 backdrop-blur-md" onClick={() => setIsJarvisOpen(false)}></div>
       <div className="relative bg-white dark:bg-gray-900 w-full md:max-w-4xl h-[95vh] md:h-[85vh] rounded-t-[3rem] md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-20 duration-500">
-        <div className="p-6 md:p-8 bg-gradient-to-r from-emerald-800 to-green-900 text-white flex items-center justify-between shadow-lg">
+        <div className="p-6 md:p-8 bg-gradient-to-r from-emerald-600 to-green-800 text-white flex items-center justify-between shadow-lg">
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl animate-pulse shadow-inner">✨</div>
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl animate-pulse">✨</div>
               <div>
                  <h3 className="text-lg md:text-2xl font-black italic tracking-tight">Jarvis الأكاديمي</h3>
-                 <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest text-emerald-100">بواسطة ربيع • مبتكر WAY</p>
+                 <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">بواسطة ربيع • WAY</p>
               </div>
            </div>
            <button onClick={() => setIsJarvisOpen(false)} className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition">✕</button>
@@ -314,12 +315,8 @@ const App: React.FC = () => {
              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6">
                 <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-5xl mb-4 shadow-xl border-4 border-white animate-float">🤖</div>
                 <h4 className="text-2xl font-black text-emerald-900 dark:text-emerald-400">واش راك يا بطل؟ 👋</h4>
-                <p className="text-gray-500 dark:text-gray-400 font-bold max-w-sm leading-relaxed text-sm">
-                   أنا جارفيس، تابع لـ ربيع صاحب فكرة منصة WAY. راني هنا باش نعاونك في بحثك الأكاديمي.
-                </p>
-                <button onClick={startJarvisLive} className="bg-emerald-600 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 shadow-xl animate-pulse text-sm">
-                   🎙️ ابدأ تحدث مباشر
-                </button>
+                <p className="text-gray-500 dark:text-gray-400 font-bold max-w-sm leading-relaxed text-sm">أنا جارفيس، المساعد الأكاديمي لمنصة WAY. راني هنا باش نعاونك في بحثك.</p>
+                <button onClick={startJarvisLive} className="bg-emerald-600 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 shadow-xl animate-pulse text-sm">🎙️ ابدأ تحدث مباشر</button>
              </div>
            )}
            {jarvisChat.map((msg, i) => (
@@ -342,38 +339,10 @@ const App: React.FC = () => {
 
         <div className="p-4 md:p-8 bg-white dark:bg-gray-900 border-t dark:border-gray-800 shadow-2xl mb-safe">
            <div className="flex gap-2 items-center">
-              <button 
-                onClick={isLiveActive ? stopJarvisLive : startJarvisLive} 
-                className={`p-4 rounded-2xl shadow-xl transition-all active:scale-90 ${isLiveActive ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}
-              >
-                {isLiveActive ? '⏹️' : '🎙️'}
-              </button>
-              <input 
-                value={jarvisInput} 
-                onChange={e => setJarvisInput(e.target.value)} 
-                onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} 
-                placeholder="اسأل جارفيس..." 
-                className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-3 font-bold text-sm outline-none dark:text-white border-2 border-transparent focus:border-emerald-500 transition-all shadow-inner" 
-              />
+              <button onClick={isLiveActive ? stopJarvisLive : startJarvisLive} className={`p-4 rounded-2xl shadow-xl transition-all active:scale-90 ${isLiveActive ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}>{isLiveActive ? '⏹️' : '🎙️'}</button>
+              <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder="اسأل جارفيس..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-2xl px-4 py-3 font-bold text-sm outline-none dark:text-white border-2 border-transparent focus:border-emerald-500 transition-all shadow-inner" />
               <button onClick={handleJarvisChat} className="bg-emerald-600 text-white p-4 rounded-2xl shadow-xl active:scale-90 transition">🚀</button>
            </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderModal = (title: string, body: React.ReactNode, onConfirm: () => void, onClose: () => void) => (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose}></div>
-      <div className="relative bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2rem] p-6 md:p-10 shadow-2xl space-y-6 animate-in zoom-in">
-        <div className="flex justify-between items-center">
-           <h3 className="text-xl font-black text-emerald-900 dark:text-emerald-400">{title}</h3>
-           <button onClick={onClose} className="text-gray-400">✕</button>
-        </div>
-        {body}
-        <div className="flex gap-3 pt-2">
-          <button onClick={onConfirm} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">حفظ</button>
-          <button onClick={onClose} className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-500 py-4 rounded-2xl font-black">إلغاء</button>
         </div>
       </div>
     </div>
@@ -387,51 +356,12 @@ const App: React.FC = () => {
           <p className="text-lg md:text-2xl font-light opacity-80">جامعتك الرقمية أينما كنت</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-          <button onClick={() => setView('register-prof')} className="bg-white text-emerald-900 p-6 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition">أنا أستاذ</button>
-          <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white p-6 rounded-2xl font-black text-lg border-2 border-emerald-400 shadow-xl hover:scale-105 transition">أنا طالب</button>
+          <button onClick={() => setView('register-prof')} className="bg-white text-emerald-900 p-6 rounded-3xl font-black text-lg shadow-xl hover:scale-105 transition-all">أنا أستاذ</button>
+          <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white p-6 rounded-3xl font-black text-lg border-2 border-emerald-400 shadow-xl hover:scale-105 transition-all">أنا طالب</button>
         </div>
         <div className="mt-12 flex flex-col gap-4">
-          <button onClick={() => { setCurrentUser(users.find(u => u.email === 'rabieriri665@gmail.com') || null); setView('dashboard'); }} className="text-emerald-200 underline font-bold text-sm">دخول سريع: ربيع (طالب)</button>
-          <button onClick={() => { setCurrentUser(users.find(u => u.id === 'p5') || null); setView('dashboard'); }} className="text-emerald-100 underline font-bold text-sm opacity-80">دخول سريع: بختة (أستاذ)</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'register-student' || view === 'register-prof') {
-    const isProfReg = view === 'register-prof';
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 space-y-6">
-          <h2 className="text-2xl font-black text-emerald-900 dark:text-emerald-400 text-center">حساب جديد - {isProfReg ? 'أستاذ' : 'طالب'}</h2>
-          <form className="space-y-4" onSubmit={(e: any) => { 
-            e.preventDefault(); 
-            handleRegister(isProfReg ? 'professor' : 'student', { 
-              firstName: e.target.fname.value, 
-              lastName: e.target.lname.value, 
-              email: e.target.email.value,
-              university: isProfReg ? e.target.univ.value : '',
-              faculty: isProfReg ? e.target.faculty.value : ''
-            }); 
-          }}>
-            <input name="fname" placeholder="الاسم" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white outline-none border focus:border-emerald-500 transition" />
-            <input name="lname" placeholder="اللقب" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white outline-none border focus:border-emerald-500 transition" />
-            <input name="email" type="email" placeholder="البريد الإلكتروني" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white outline-none border focus:border-emerald-500 transition" />
-            {isProfReg && (
-              <>
-                <select name="univ" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white outline-none border focus:border-emerald-500 transition">
-                  <option value="">اختر الجامعة...</option>
-                  {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-                <select name="faculty" required className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl dark:text-white outline-none border focus:border-emerald-500 transition">
-                  <option value="">اختر الكلية...</option>
-                  {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </>
-            )}
-            <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">ابدأ الآن</button>
-            <button type="button" onClick={() => setView('landing')} className="w-full text-gray-400 text-sm font-bold">رجوع</button>
-          </form>
+          <button onClick={() => { setCurrentUser(users.find(u => u.email === 'rabieriri665@gmail.com') || null); setView('dashboard'); }} className="text-emerald-100 underline font-bold text-sm">دخول سريع: ربيع (طالب)</button>
+          <button onClick={() => { setCurrentUser(users.find(u => u.id === 'p5') || null); setView('dashboard'); }} className="text-emerald-50 underline font-bold text-sm opacity-80">دخول سريع: بختة (أستاذ)</button>
         </div>
       </div>
     );
@@ -441,13 +371,13 @@ const App: React.FC = () => {
     const isProf = currentUser.role === 'professor';
     const mobileTabs = isProf ? [
       {id:'home', l: 'الرئيسية', i: '🏠'},
-      {id:'messages', l: 'الدردشة', i: '💬'}, 
+      {id:'messages', l: 'الرسائل', i: '💬'}, 
       {id:'wallet', l: 'المحفظة', i: '💰'},
       {id:'profile', l: 'الملف', i: '👤'}
     ] : [
       {id:'home', l: 'اكتشاف', i: '🔍'},
       {id:'my-channels', l: 'قنواتي', i: '📡'},
-      {id:'messages', l: 'الدردشة', i: '💬'}, 
+      {id:'messages', l: 'الرسائل', i: '💬'}, 
       {id:'wallet', l: 'المحفظة', i: '💰'},
       {id:'profile', l: 'الملف', i: '👤'}
     ];
@@ -457,7 +387,7 @@ const App: React.FC = () => {
         
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex w-72 bg-white dark:bg-gray-900 border-l dark:border-gray-800 p-8 flex-col gap-8 shadow-xl z-50">
-          <div className="flex justify-center"><h2 className="text-3xl font-black text-emerald-900 dark:text-emerald-400">WAY</h2></div>
+          <div className="flex justify-center"><h2 className="text-3xl font-black text-emerald-600 dark:text-emerald-400">WAY</h2></div>
           <nav className="flex flex-col gap-2">
             {mobileTabs.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`p-4 rounded-2xl font-black text-right transition flex items-center gap-4 ${activeTab === tab.id ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
@@ -477,34 +407,22 @@ const App: React.FC = () => {
            ))}
         </nav>
 
-        {/* Jarvis Button */}
-        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-24 right-4 md:bottom-10 md:right-10 z-[110] w-14 h-14 md:w-20 md:h-20 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center animate-bounce border-4 border-white dark:border-gray-800 group transition-all active:scale-90">
+        {/* Jarvis Button FAB */}
+        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-24 right-4 md:bottom-10 md:right-10 z-[110] w-14 h-14 md:w-20 md:h-20 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center animate-bounce border-4 border-white dark:border-gray-800 transition-all active:scale-90">
            <span className="text-2xl md:text-3xl">✨</span>
         </button>
         {renderJarvisOverlay()}
-
-        {showCreateChannel && renderModal("إنشاء قناة مادة جديدة", (
-          <div className="space-y-4">
-            <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="اسم المادة" className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border outline-none font-bold dark:text-white" />
-            <input value={newChannelData.department} onChange={e => setNewChannelData({...newChannelData, department: e.target.value})} placeholder="القسم (مثلاً: قسم التسيير)" className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border outline-none font-bold dark:text-white" />
-            <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="وصف المادة" className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border outline-none font-bold h-24 dark:text-white" />
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm dark:text-gray-300">سعر الاشتراك (دج)</span>
-              <input type="number" value={newChannelData.price} onChange={e => setNewChannelData({...newChannelData, price: Number(e.target.value)})} className="w-24 bg-white dark:bg-gray-800 p-2 rounded-xl border text-center font-black dark:text-white" />
-            </div>
-          </div>
-        ), handleCreateChannel, () => setShowCreateChannel(false))}
 
         <main className="flex-1 p-4 md:p-12 overflow-y-auto pb-32">
           {activeTab === 'home' && (
             <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
                <div className="flex flex-col gap-2">
                   <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white">أهلاً بك، {currentUser.firstName} 👋</h1>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{currentUser.university}</p>
+                  <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest">{currentUser.university}</p>
                </div>
 
                {isProf && (
-                 <div className="bg-emerald-600 text-white p-6 rounded-[2rem] shadow-xl flex items-center justify-around">
+                 <div className="bg-emerald-600 text-white p-6 rounded-3xl shadow-xl flex items-center justify-around">
                     <div className="text-center">
                        <p className="text-[10px] font-black uppercase opacity-70">إجمالي الطلاب</p>
                        <p className="text-3xl font-black">{currentUser.studentCount || 0}</p>
@@ -520,11 +438,11 @@ const App: React.FC = () => {
                {!isProf ? (
                  <>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white dark:bg-gray-900 p-4 rounded-3xl border dark:border-gray-800 shadow-sm">
-                      <select value={filterUniv || currentUser.university} onChange={e => setFilterUniv(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none border-none text-sm font-bold">
+                      <select value={filterUniv || currentUser.university} onChange={e => setFilterUniv(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none border focus:border-emerald-500 transition-all text-sm font-bold">
                          <option value="">اختر الجامعة...</option>
                          {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
-                      <select value={filterFaculty || currentUser.faculty} onChange={e => setFilterFaculty(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none border-none text-sm font-bold">
+                      <select value={filterFaculty || currentUser.faculty} onChange={e => setFilterFaculty(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none border focus:border-emerald-500 transition-all text-sm font-bold">
                          <option value="">اختر الكلية...</option>
                          {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
                       </select>
@@ -537,7 +455,7 @@ const App: React.FC = () => {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                          {users.filter(u => u.role === 'professor' && u.university === (filterUniv || currentUser.university) && u.faculty === (filterFaculty || currentUser.faculty)).map(prof => (
-                           <div key={prof.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 shadow-sm text-center space-y-4">
+                           <div key={prof.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm text-center space-y-4 hover:border-emerald-500 transition-all">
                               <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="md" />
                               <h4 className="font-black dark:text-white">{prof.firstName} {prof.lastName}</h4>
                               <div className="flex gap-2">
@@ -552,7 +470,7 @@ const App: React.FC = () => {
                    {selectedProfId && (
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-bottom-5">
                         {channels.filter(c => c.professorId === selectedProfId).map(chan => (
-                          <div key={chan.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 shadow-sm flex flex-col justify-between group">
+                          <div key={chan.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm flex flex-col justify-between group">
                              <div className="flex justify-between items-start mb-4">
                                 <div>
                                    <h4 className="font-black text-lg dark:text-white group-hover:text-emerald-600 transition">{chan.name}</h4>
@@ -570,12 +488,12 @@ const App: React.FC = () => {
                  </>
                ) : (
                  <div className="space-y-6">
-                    <button onClick={() => setShowCreateChannel(true)} className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 active:scale-95 transition">
+                    <button onClick={() => setShowCreateChannel(true)} className="w-full bg-emerald-600 text-white py-5 rounded-3xl font-black shadow-xl flex items-center justify-center gap-3 active:scale-95 transition">
                        <span className="text-2xl">➕</span> إنشاء قناة جديدة
                     </button>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                        {channels.filter(c => c.professorId === currentUser.id).map(c => (
-                         <div key={c.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 shadow-sm group hover:border-emerald-500 transition-all">
+                         <div key={c.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl border dark:border-gray-800 shadow-sm group hover:border-emerald-500 transition-all">
                             <div className="flex justify-between items-start mb-4">
                                <div>
                                   <h4 className="font-black text-lg dark:text-white">{c.name}</h4>
@@ -594,82 +512,9 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'my-channels' && (
-            <div className="max-w-5xl mx-auto space-y-6">
-               <h2 className="text-2xl font-black dark:text-white flex items-center gap-3">
-                  <span className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl text-xl">📡</span>
-                  قنواتي المشترك بها
-               </h2>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {channels.filter(c => c.subscribers.includes(currentUser.id)).map(chan => (
-                    <div key={chan.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 shadow-sm flex justify-between items-center group active:scale-95 transition">
-                       <div className="text-right">
-                          <h4 className="font-black text-lg dark:text-white">{chan.name}</h4>
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">{chan.department || 'قسم عام'}</p>
-                       </div>
-                       <button onClick={() => { setSelectedChannel(chan); setView('channel-view'); }} className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black shadow-lg shadow-emerald-600/20">دخول</button>
-                    </div>
-                  ))}
-                  {channels.filter(c => c.subscribers.includes(currentUser.id)).length === 0 && (
-                    <div className="col-span-full py-20 text-center opacity-30 bg-white dark:bg-gray-900 border-2 border-dashed rounded-[3rem] dark:border-gray-800">
-                       <span className="text-6xl mb-4 block">📡</span>
-                       <p className="font-black text-lg dark:text-gray-100">لم تشترك في أي قناة بعد.</p>
-                    </div>
-                  )}
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'messages' && (
-            <div className="max-w-6xl mx-auto h-[75vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-xl border dark:border-gray-800 overflow-hidden relative">
-               <div className={`w-full md:w-80 border-l dark:border-gray-800 flex flex-col ${activeChatUserId ? 'hidden md:flex' : 'flex h-full'}`}>
-                  <div className="p-6 border-b dark:border-gray-800 font-black text-xl dark:text-white bg-gray-50/50 dark:bg-gray-900/50">المحادثات</div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar pb-32">
-                     {users.filter(u => u.id !== currentUser.id).map(u => (
-                       <button key={u.id} onClick={() => setActiveChatUserId(u.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${activeChatUserId === u.id ? 'bg-emerald-600 text-white shadow-xl' : 'hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300'}`}>
-                          <ProfessorRank avatar={u.avatar} studentCount={u.studentCount || 0} size="sm" />
-                          <div className="text-right">
-                             <p className="font-black text-sm">{u.firstName} {u.lastName}</p>
-                             <p className={`text-[10px] ${activeChatUserId === u.id ? 'text-emerald-100' : 'text-gray-400'}`}>{u.role === 'professor' ? 'أستاذ' : 'طالب'}</p>
-                          </div>
-                       </button>
-                     ))}
-                  </div>
-               </div>
-               <div className={`flex-1 flex flex-col bg-gray-50/20 dark:bg-gray-950/20 h-full ${activeChatUserId ? 'flex' : 'hidden md:flex'}`}>
-                  {activeChatUserId ? (
-                    <>
-                      <div className="p-4 md:p-6 border-b dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center shadow-sm">
-                         <div className="flex items-center gap-3">
-                            <button onClick={() => setActiveChatUserId(null)} className="md:hidden text-emerald-600 text-xl font-black p-2">◀</button>
-                            <p className="font-black text-lg dark:text-white">{users.find(u => u.id === activeChatUserId)?.firstName}</p>
-                         </div>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar pb-40">
-                        {(personalChats[getChatKey(currentUser.id, activeChatUserId)] || []).map(msg => (
-                          <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                            <div className={`p-4 rounded-2xl max-w-[90%] md:max-w-[80%] shadow-md ${msg.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 dark:text-white rounded-tl-none border dark:border-gray-700'}`}>
-                              {msg.imageUrl && <img src={msg.imageUrl} className="rounded-xl mb-2 max-w-full h-auto border-4 border-white dark:border-gray-700" alt="uploaded content" />}
-                              {msg.text && <p className="font-bold text-sm leading-relaxed">{msg.text}</p>}
-                            </div>
-                          </div>
-                        ))}
-                        <div ref={chatEndRef} />
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-2 md:gap-3 z-[101]">
-                         <button onClick={handleImageUpload} className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-emerald-50 transition active:scale-90 text-2xl">📷</button>
-                         <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendPersonal()} placeholder="اكتب رسالة..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-2 outline-none border focus:border-emerald-500 transition dark:text-white font-bold" />
-                         <button onClick={() => handleSendPersonal()} className="bg-emerald-600 text-white px-6 md:px-10 rounded-xl font-black shadow-xl active:scale-95 transition">🚀</button>
-                      </div>
-                    </>
-                  ) : <div className="flex-1 flex flex-col items-center justify-center opacity-20 py-20"><span className="text-8xl mb-4 block">💬</span><p className="font-black text-2xl">اختر محادثة للبدء</p></div>}
-               </div>
-            </div>
-          )}
-
           {activeTab === 'wallet' && (
             <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
-               <div className="bg-gradient-to-br from-emerald-600 to-green-700 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+               <div className="bg-gradient-to-br from-emerald-600 to-green-800 p-8 rounded-3xl text-white shadow-2xl relative overflow-hidden">
                   <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">رصيدك الحالي</p>
                   <h3 className="text-5xl font-black mb-6 flex items-baseline gap-2">{currentUser.walletBalance.toLocaleString()}<span className="text-lg opacity-60">دج</span></h3>
                   <div className="flex gap-3">
@@ -681,13 +526,13 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'profile' && (
-            <div className="max-w-2xl mx-auto bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] border dark:border-gray-800 shadow-sm space-y-8">
+            <div className="max-w-2xl mx-auto bg-white dark:bg-gray-900 p-8 rounded-3xl border dark:border-gray-800 shadow-sm space-y-8">
                <div className="flex flex-col items-center gap-4 text-center">
                   <ProfessorRank avatar={currentUser.avatar} studentCount={currentUser.studentCount || 0} size="lg" />
                   <div className="space-y-1">
                     <h2 className="text-2xl font-black dark:text-white">{currentUser.firstName} {currentUser.lastName}</h2>
                     <p className="text-emerald-600 dark:text-emerald-400 font-black">{currentUser.email}</p>
-                    <span className="inline-block bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full text-[10px] font-black tracking-tighter uppercase mt-2">{currentUser.role === 'professor' ? '🛡️ أستاذ معتمد' : '🎓 طالب مفعل'}</span>
+                    <span className="inline-block bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 px-4 py-2 rounded-full text-[10px] font-black tracking-tighter uppercase mt-2">{currentUser.role === 'professor' ? '🛡️ أستاذ معتمد' : '🎓 طالب مفعل'}</span>
                   </div>
                </div>
                <div className="pt-8 border-t dark:border-gray-800 space-y-4">
@@ -701,6 +546,51 @@ const App: React.FC = () => {
                </div>
             </div>
           )}
+
+          {activeTab === 'messages' && (
+             <div className="max-w-6xl mx-auto h-[75vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-3xl shadow-xl border dark:border-gray-800 overflow-hidden relative">
+               <div className={`w-full md:w-80 border-l dark:border-gray-800 flex flex-col ${activeChatUserId ? 'hidden md:flex' : 'flex h-full'}`}>
+                  <div className="p-6 border-b dark:border-gray-800 font-black text-xl text-emerald-600">المحادثات</div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar pb-32">
+                     {users.filter(u => u.id !== currentUser.id).map(u => (
+                       <button key={u.id} onClick={() => setActiveChatUserId(u.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${activeChatUserId === u.id ? 'bg-emerald-600 text-white shadow-xl' : 'hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300'}`}>
+                          <ProfessorRank avatar={u.avatar} studentCount={u.studentCount || 0} size="sm" />
+                          <div className="text-right">
+                             <p className="font-black text-sm">{u.firstName}</p>
+                             <p className={`text-[10px] ${activeChatUserId === u.id ? 'text-emerald-100' : 'text-gray-400'}`}>{u.role === 'professor' ? 'أستاذ' : 'طالب'}</p>
+                          </div>
+                       </button>
+                     ))}
+                  </div>
+               </div>
+               <div className={`flex-1 flex flex-col bg-gray-50/20 dark:bg-gray-950/20 h-full ${activeChatUserId ? 'flex' : 'hidden md:flex'}`}>
+                  {activeChatUserId ? (
+                    <>
+                      <div className="p-4 md:p-6 border-b dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center shadow-sm">
+                         <div className="flex items-center gap-3">
+                            <button onClick={() => setActiveChatUserId(null)} className="md:hidden text-emerald-600 text-xl font-black p-2">◀</button>
+                            <p className="font-black text-lg dark:text-white text-emerald-600">{users.find(u => u.id === activeChatUserId)?.firstName}</p>
+                         </div>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar pb-40">
+                        {(personalChats[[currentUser.id, activeChatUserId].sort().join('_')] || []).map(msg => (
+                          <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                            <div className={`p-4 rounded-2xl max-w-[90%] md:max-w-[80%] shadow-md ${msg.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 dark:text-white rounded-tl-none border dark:border-gray-700'}`}>
+                              {msg.text && <p className="font-bold text-sm leading-relaxed">{msg.text}</p>}
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-2 z-[101]">
+                         <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendPersonal()} placeholder="اكتب رسالة..." className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl px-4 py-2 outline-none border focus:border-emerald-500 transition-all font-bold dark:text-white" />
+                         <button onClick={() => handleSendPersonal()} className="bg-emerald-600 text-white px-6 md:px-10 rounded-xl font-black shadow-xl active:scale-95 transition">🚀</button>
+                      </div>
+                    </>
+                  ) : <div className="flex-1 flex flex-col items-center justify-center opacity-20 py-20"><span className="text-8xl mb-4 block">💬</span><p className="font-black text-2xl">اختر محادثة للبدء</p></div>}
+               </div>
+            </div>
+          )}
         </main>
       </div>
     );
@@ -710,19 +600,34 @@ const App: React.FC = () => {
     const isProf = selectedChannel.professorId === currentUser.id;
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-right transition-colors relative">
-        {showAddContent && renderModal("إضافة محتوى جديد", (
-          <div className="space-y-4">
-            <input value={newContentData.title} onChange={e => setNewContentData({...newContentData, title: e.target.value})} placeholder="عنوان المحتوى..." className="w-full bg-gray-50 p-4 rounded-xl border outline-none font-bold dark:bg-gray-800 dark:text-white dark:border-gray-700" />
-            <select value={newContentData.type} onChange={e => setNewContentData({...newContentData, type: e.target.value as any})} className="w-full bg-gray-50 p-4 rounded-xl border outline-none font-bold dark:bg-gray-800 dark:text-white dark:border-gray-700">
-               <option value="pdf">📄 ملف PDF / درس</option>
-               <option value="video">🎥 فيديو تعليمي</option>
-               <option value="image">🖼️ صورة / مخطط</option>
-            </select>
+        {showAddContent && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowAddContent(false)}></div>
+            <div className="relative bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl space-y-6">
+              <h3 className="text-xl font-black text-emerald-600">إضافة محتوى جديد (رفع ملف)</h3>
+              <div className="space-y-4">
+                <input value={newContentData.title} onChange={e => setNewContentData({...newContentData, title: e.target.value})} placeholder="عنوان المحتوى..." className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border focus:border-emerald-500 outline-none font-bold dark:text-white" />
+                <div className="mt-4">
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,video/*,image/*" />
+                  <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-6 rounded-2xl border-2 border-dashed border-emerald-300 hover:bg-emerald-100 transition active:scale-95">
+                    <span className="text-2xl">📂</span>
+                    <div className="text-right">
+                       <p className="font-black text-sm">{selectedFile ? "تغيير الملف" : "اختر ملف من جهازك"}</p>
+                       {selectedFile && <p className="text-[10px] opacity-70 truncate max-w-[200px]">{selectedFile.name}</p>}
+                    </div>
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={handleAddContent} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">حفظ ورفع</button>
+                <button onClick={() => setShowAddContent(false)} className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-500 py-4 rounded-2xl font-black">إلغاء</button>
+              </div>
+            </div>
           </div>
-        ), handleAddContent, () => setShowAddContent(false))}
+        )}
 
         <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-800 p-4 flex items-center justify-between sticky top-0 z-50 shadow-md">
-           <button onClick={() => setView('dashboard')} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl transition dark:text-white font-black text-xs flex items-center gap-2 active:scale-90">✕ رجوع</button>
+           <button onClick={() => setView('dashboard')} className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl transition text-emerald-600 font-black text-xs active:scale-90">✕ رجوع</button>
            <div className="text-right">
               <h2 className="font-black text-sm text-emerald-900 dark:text-emerald-400 truncate max-w-[150px]">{selectedChannel.name}</h2>
               <p className="text-[9px] font-bold text-gray-400">{selectedChannel.department}</p>
@@ -741,14 +646,17 @@ const App: React.FC = () => {
           {channelTab === 'pdf' && (
             <div className="max-w-4xl mx-auto space-y-4">
               {isProf && (
-                <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-2 border-dashed border-emerald-300 dark:border-emerald-700 p-10 rounded-[2.5rem] text-emerald-600 dark:text-emerald-400 font-black hover:bg-emerald-50 transition flex flex-col items-center gap-2 active:scale-95">
+                <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-2 border-dashed border-emerald-300 dark:border-emerald-700 p-10 rounded-3xl text-emerald-600 dark:text-emerald-400 font-black hover:bg-emerald-50 transition flex flex-col items-center gap-2 active:scale-95">
                   <span className="text-4xl">➕</span>
-                  <span className="text-sm">إضافة محتوى تعليمي</span>
+                  <span className="text-sm">إضافة درس جديد (رفع ملف)</span>
                 </button>
               )}
               {selectedChannel.content && selectedChannel.content.length > 0 ? selectedChannel.content.map(item => (
-                <div key={item.id} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm group animate-in slide-in-from-right transition-all active:scale-98">
-                   <button onClick={() => handleJarvisSummarize(item)} className="w-full md:w-auto bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black shadow-lg shadow-emerald-500/20 active:scale-95">✨ تلخيص جارفيس</button>
+                <div key={item.id} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm group animate-in slide-in-from-right transition-all">
+                   <div className="flex gap-2 w-full md:w-auto">
+                     <button onClick={() => handleJarvisSummarize(item)} className="flex-1 md:flex-none bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-lg shadow-emerald-500/20 active:scale-95">✨ تلخيص</button>
+                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex-1 md:flex-none bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl text-[10px] font-black shadow-inner text-center active:scale-95">📂 عرض</a>
+                   </div>
                    <div className="flex items-center gap-4 text-right w-full md:w-auto">
                       <div className="flex-1">
                          <p className="font-black text-base dark:text-white leading-tight">{item.title}</p>
@@ -760,41 +668,32 @@ const App: React.FC = () => {
                    </div>
                 </div>
               )) : (
-                <div className="text-center py-20 opacity-20"><span className="text-6xl mb-4 block">📭</span><p className="font-black text-xl">لا يوجد محتوى حالياً.</p></div>
+                <div className="text-center py-20 opacity-20"><span className="text-6xl mb-4 block text-emerald-200">📭</span><p className="font-black text-xl dark:text-white">لا يوجد محتوى حالياً.</p></div>
               )}
             </div>
           )}
           
           {channelTab === 'broadcast' && (
-            <div className="max-w-3xl mx-auto h-[65vh] flex flex-col bg-white dark:bg-gray-900 rounded-[2.5rem] border dark:border-gray-800 overflow-hidden shadow-xl animate-in zoom-in">
+            <div className="max-w-3xl mx-auto h-[65vh] flex flex-col bg-white dark:bg-gray-900 rounded-3xl border dark:border-gray-800 overflow-hidden shadow-xl animate-in zoom-in">
                <div className="bg-emerald-600 text-white p-6 text-center font-black text-lg shadow-md">📢 لوحة الإعلانات</div>
                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-32">
                   {broadcastMessages[selectedChannel.id]?.map(msg => (
                     <div key={msg.id} className="bg-white dark:bg-gray-800 border-r-4 border-emerald-500 p-6 rounded-2xl shadow-sm animate-in slide-in-from-left">
-                       <p className="text-[9px] text-gray-400 mb-2 font-black flex items-center gap-2"><span>📅</span> {new Date(msg.timestamp).toLocaleString('ar-DZ')}</p>
+                       <p className="text-[9px] text-gray-400 mb-2 font-black">📅 {new Date(msg.timestamp).toLocaleString('ar-DZ')}</p>
                        <p className="font-bold text-sm leading-relaxed text-gray-700 dark:text-gray-200">{msg.text}</p>
                     </div>
-                  )) || <div className="h-full flex flex-col items-center justify-center opacity-10 gap-4"><span className="text-6xl animate-bounce">📢</span><p className="font-black text-lg">لا توجد إعلانات عاجلة.</p></div>}
+                  )) || <div className="h-full flex flex-col items-center justify-center opacity-10 gap-4"><span className="text-6xl animate-bounce text-emerald-400">📢</span><p className="font-black text-lg">لا توجد إعلانات عاجلة.</p></div>}
                   <div ref={chatEndRef}></div>
                </div>
                {isProf && (
                  <div className="p-4 border-t dark:border-gray-800 flex gap-2 bg-white dark:bg-gray-900">
-                    <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendBroadcast()} placeholder="اكتب إعلاناً..." className="flex-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none font-bold dark:text-white text-sm" />
+                    <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendBroadcast()} placeholder="اكتب إعلاناً..." className="flex-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl outline-none font-bold dark:text-white text-sm border focus:border-emerald-500" />
                     <button onClick={handleSendBroadcast} className="bg-emerald-600 text-white px-8 py-2 rounded-xl font-black shadow-lg active:scale-95 transition">نشر</button>
                  </div>
                )}
             </div>
           )}
         </main>
-        
-        {/* Meet Button FAB for mobile in channel view */}
-        <button 
-          onClick={() => window.open(`https://meet.google.com/new`, '_blank')} 
-          className="fixed bottom-24 left-6 z-[110] bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-2 active:scale-90 transition font-black text-xs"
-        >
-          <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
-          Meet
-        </button>
       </div>
     );
   }
