@@ -1,5 +1,6 @@
 
 export type UserRole = 'professor' | 'student' | 'admin';
+export type Language = 'ar' | 'fr' | 'en';
 
 export enum Medal {
   NONE = 'NONE',
@@ -15,6 +16,7 @@ export interface User {
   lastName: string;
   email: string;
   role: UserRole;
+  language?: Language;
   university?: string;
   faculty?: string;
   department?: string;
@@ -23,8 +25,8 @@ export interface User {
   avatar: string;
   isApproved: boolean;
   studentCount?: number;
-  phoneNumber?: string;     // For students to recharge
-  paymentMethod?: string;   // For professors (Email or CCP)
+  phoneNumber?: string;
+  paymentMethod?: string;
   bio?: string;
 }
 
@@ -37,7 +39,7 @@ export interface Channel {
   price: number;
   subscribers: string[];
   content: ContentItem[];
-  meetingUrl?: string; // رابط غوغل ميت
+  meetingUrl?: string;
 }
 
 export interface ContentItem {

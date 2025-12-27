@@ -1,6 +1,19 @@
 {
   "name": "WAY - الجامعية الرقمية",
+  "short_name": "WAY",
   "description": "منصة تعليمية جزائرية متكاملة تربط بين الأساتذة والطلاب مع نظام مكافآت ومحفظة إلكترونية لدعم المحتوى التعليمي.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
   "requestFramePermissions": [
     "camera",
     "microphone"
