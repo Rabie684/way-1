@@ -47,7 +47,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      // تحميل البيانات من LocalStorage
       const storedUsers = localStorage.getItem('way_users');
       const storedChannels = localStorage.getItem('way_channels');
       const sessionUser = localStorage.getItem('way_session');
@@ -75,7 +74,6 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('way_session', JSON.stringify(currentUser));
-      // تحديث المستخدم في قائمة المستخدمين أيضاً
       if (!users.find(u => u.id === currentUser.id)) {
         setUsers(prev => [...prev, currentUser]);
       } else {
@@ -84,7 +82,7 @@ const App: React.FC = () => {
     } else {
       localStorage.removeItem('way_session');
     }
-  }, [currentUser]);
+  }, [currentUser, users]);
 
   useEffect(() => { 
     document.documentElement.classList.toggle('dark', isDarkMode); 
@@ -468,8 +466,19 @@ const App: React.FC = () => {
           <p className="text-xl opacity-80 font-bold uppercase tracking-widest">جامعتك الرقمية</p>
         </div>
         <div className="flex flex-col gap-4 w-full max-w-sm">
-          <button onClick={() => setView('register-prof')} className="bg-white text-emerald-600 py-6 rounded-3xl font-black text-xl shadow-2xl hover:scale-105 transition-all">أنا أستاذ</button>
-          <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white py-6 rounded-3xl font-black text-xl border-2 border-emerald-400 shadow-2xl hover:scale-105 transition-all">أنا طالب</button>
+          {/* New Direct Access Button */}
+          <button 
+            onClick={() => handleQuickLogin('student')} 
+            className="bg-yellow-400 text-emerald-900 py-6 rounded-3xl font-black text-xl shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-3 border-b-4 border-yellow-600"
+          >
+            <span>🚀</span> دخول مباشر (تجربة ربيع)
+          </button>
+          
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            <button onClick={() => setView('register-prof')} className="bg-white text-emerald-600 py-5 rounded-3xl font-black text-lg shadow-xl hover:scale-105 transition-all">أنا أستاذ</button>
+            <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white py-5 rounded-3xl font-black text-lg border-2 border-emerald-400 shadow-xl hover:scale-105 transition-all">أنا طالب</button>
+          </div>
+          
           <button onClick={() => setView('login')} className="mt-10 font-bold underline text-lg opacity-80">لديك حساب؟ سجل دخول</button>
         </div>
         <footer className="absolute bottom-10 opacity-60 text-xs font-bold">بواسطة ربيع • Rabie - 2025</footer>
@@ -479,30 +488,41 @@ const App: React.FC = () => {
     if (view === 'login' || view.startsWith('register')) return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] shadow-2xl p-10 space-y-8 animate-in zoom-in duration-300">
-          <h2 className="text-4xl font-black text-emerald-600 text-center">{view === 'login' ? 'مرحباً بعودتك' : 'انضم لـ WAY'}</h2>
+          <header className="text-center space-y-2">
+            <h2 className="text-4xl font-black text-emerald-600">{view === 'login' ? 'مرحباً بعودتك' : 'انضم لـ WAY'}</h2>
+            <p className="text-xs text-gray-400 font-bold">سجل دخولك للوصول إلى عالمك الجامعي الرقمي</p>
+          </header>
           
           {view === 'login' && (
             <div className="space-y-4">
-               <p className="text-xs font-black text-gray-400 text-center uppercase tracking-widest">دخول سريع للتجربة</p>
-               <div className="grid grid-cols-2 gap-3">
+               <div className="flex items-center gap-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+                  <span>الدخول السريع</span>
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+               </div>
+               <div className="grid grid-cols-2 gap-4">
                   <button 
                     onClick={() => handleQuickLogin('student')}
-                    className="flex flex-col items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-100 dark:border-emerald-800 rounded-2xl hover:bg-emerald-100 transition-all group"
+                    className="flex flex-col items-center gap-3 p-5 bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-100 dark:border-emerald-800 rounded-[2rem] hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all group relative overflow-hidden"
                   >
-                    <span className="text-3xl group-hover:scale-110 transition-transform">🎓</span>
-                    <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-400">حمر العين ربيع</span>
+                    <div className="absolute top-0 right-0 p-2 opacity-10 text-4xl transform translate-x-2 -translate-y-2 group-hover:scale-125 transition-transform">🎓</div>
+                    <span className="text-3xl filter drop-shadow-sm">👦</span>
+                    <span className="text-[11px] font-black text-emerald-800 dark:text-emerald-400">حمر العين ربيع</span>
+                    <span className="text-[8px] opacity-60 font-black">طالب (Founder)</span>
                   </button>
                   <button 
                     onClick={() => handleQuickLogin('professor')}
-                    className="flex flex-col items-center gap-2 p-4 bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-100 dark:border-blue-800 rounded-2xl hover:bg-blue-100 transition-all group"
+                    className="flex flex-col items-center gap-3 p-5 bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-100 dark:border-blue-800 rounded-[2rem] hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all group relative overflow-hidden"
                   >
-                    <span className="text-3xl group-hover:scale-110 transition-transform">👩‍🏫</span>
-                    <span className="text-[10px] font-black text-blue-800 dark:text-blue-400">بن الطاهر بختة</span>
+                    <div className="absolute top-0 right-0 p-2 opacity-10 text-4xl transform translate-x-2 -translate-y-2 group-hover:scale-125 transition-transform">👩‍🏫</div>
+                    <span className="text-3xl filter drop-shadow-sm">👩‍🏫</span>
+                    <span className="text-[11px] font-black text-blue-800 dark:text-blue-400">بن الطاهر بختة</span>
+                    <span className="text-[8px] opacity-60 font-black">أستاذة (Partner)</span>
                   </button>
                </div>
-               <div className="relative flex items-center py-2">
+               <div className="relative flex items-center py-4">
                   <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
-                  <span className="flex-shrink mx-4 text-[10px] font-black text-gray-300">أو عبر النموذج</span>
+                  <span className="flex-shrink mx-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">أو بياناتك الخاصة</span>
                   <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
                </div>
             </div>
@@ -534,10 +554,10 @@ const App: React.FC = () => {
                  {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
                </select>
             )}
-            <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-black text-xl shadow-xl hover:bg-emerald-700 transition-all">
+            <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-black text-xl shadow-xl hover:bg-emerald-700 transition-all transform active:scale-95">
               {view === 'login' ? 'دخول' : 'بدء الرحلة'}
             </button>
-            <button type="button" onClick={() => setView('landing')} className="w-full text-gray-400 font-bold">رجوع للرئيسية</button>
+            <button type="button" onClick={() => setView('landing')} className="w-full text-gray-400 font-bold hover:text-emerald-600 transition-colors">رجوع للرئيسية</button>
           </form>
         </div>
       </div>
