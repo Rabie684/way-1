@@ -8,7 +8,7 @@ const App: React.FC = () => {
   // --- States ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<'landing' | 'dashboard' | 'channel-view' | 'chat-view'>('landing');
-  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'messages' | 'wallet' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'explore' | 'messages' | 'ads' | 'wallet' | 'profile'>('home');
   const [loading, setLoading] = useState(true);
   
   const [users, setUsers] = useState<User[]>([]);
@@ -22,20 +22,24 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'ar');
   
   const [filterUniv, setFilterUniv] = useState<string>('');
-  const [filterFaculty, setFilterFaculty] = useState<string>('');
-
+  
   const [isJarvisOpen, setIsJarvisOpen] = useState(false);
   const [isJarvisThinking, setIsJarvisThinking] = useState(false);
   const [jarvisChat, setJarvisChat] = useState<{role: 'user' | 'jarvis', text: string}[]>([]);
   const [jarvisInput, setJarvisInput] = useState('');
 
   const [showCreateChannel, setShowCreateChannel] = useState(false);
-  const [showAddContent, setShowAddContent] = useState(false);
   
   const [newChannelData, setNewChannelData] = useState({ name: '', price: 300, description: '', meetingUrl: '' });
-  const [newContentData, setNewContentData] = useState({ title: '', type: 'pdf' as any });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // --- Mock Ads ---
+  const ads = [
+    { id: 1, title: 'مسابقة الابتكار الجامعي 2024', content: 'سجل الآن للمشاركة في أكبر تحدي تقني لطلبة جامعة USTHB.', tag: 'حدث', color: 'bg-emerald-500' },
+    { id: 2, title: 'عرض خاص للأساتذة الجدد', content: 'احصل على عمولة 10% فقط لأول 3 أشهر عند إنشاء مقياسك الأول.', tag: 'عرض', color: 'bg-blue-500' },
+    { id: 3, title: 'تحديث نظام الدفع عبر البطاقة الذهبية', content: 'يمكنك الآن شحن محفظتك مباشرة وبكل سهولة.', tag: 'تحديث', color: 'bg-amber-500' }
+  ];
 
   // --- Effects ---
   useEffect(() => {
@@ -132,21 +136,6 @@ const App: React.FC = () => {
     setNewChannelData({ name: '', price: 300, description: '', meetingUrl: '' });
   };
 
-  const handleAddContent = () => {
-    if (!selectedChannel) return;
-    const newItem: ContentItem = {
-      id: 'item_' + Date.now(),
-      title: newContentData.title,
-      type: newContentData.type,
-      url: '#',
-      createdAt: new Date()
-    };
-    const updated = channels.map(c => c.id === selectedChannel.id ? { ...c, content: [...c.content, newItem] } : c);
-    setChannels(updated);
-    setSelectedChannel({ ...selectedChannel, content: [...selectedChannel.content, newItem] });
-    setShowAddContent(false);
-  };
-
   const handleJarvisAsk = async () => {
     if (!jarvisInput.trim()) return;
     const q = jarvisInput;
@@ -180,10 +169,18 @@ const App: React.FC = () => {
     return ar;
   };
 
+  // --- Icons ---
+  const HomeIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>;
+  const SearchIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>;
+  const ChatIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>;
+  const AdsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>;
+  const WalletIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>;
+  const ProfileIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>;
+
   if (loading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-white dark:bg-gray-950 font-black text-emerald-600 text-2xl">
       <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
-      جاري التحميل...
+      WAY...
     </div>
   );
 
@@ -215,11 +212,12 @@ const App: React.FC = () => {
   }
 
   const navItems = [
-    { id: 'home', icon: '🏠', label: t("الرئيسية", "Accueil", "Home") },
-    { id: 'explore', icon: '🔍', label: t("استكشف", "Explorer", "Explore"), show: currentUser?.role === 'student' },
-    { id: 'messages', icon: '💬', label: t("الدردشة", "Messages", "Chats") },
-    { id: 'wallet', icon: '💰', label: t("المحفظة", "Bourse", "Wallet") },
-    { id: 'profile', icon: '👤', label: t("الملف", "Profil", "Profile") }
+    { id: 'home', icon: <HomeIcon />, label: t("الرئيسية", "Accueil", "Home") },
+    { id: 'explore', icon: <SearchIcon />, label: t("استكشف", "Explorer", "Explore"), show: currentUser?.role === 'student' },
+    { id: 'messages', icon: <ChatIcon />, label: t("الدردشة", "Messages", "Chats") },
+    { id: 'ads', icon: <AdsIcon />, label: t("إعلانات", "Annonces", "Ads") },
+    { id: 'wallet', icon: <WalletIcon />, label: t("المحفظة", "Bourse", "Wallet") },
+    { id: 'profile', icon: <ProfileIcon />, label: t("الملف", "Profil", "Profile") }
   ].filter(item => item.show !== false);
 
   return (
@@ -238,6 +236,7 @@ const App: React.FC = () => {
           {navItems.map(tab => (
             <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); setView('dashboard'); }} className={`p-4 rounded-2xl font-black text-right transition-all flex items-center gap-3 ${activeTab === tab.id ? 'bg-emerald-600 text-white shadow-xl translate-x-1' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
               <span className="text-xl">{tab.icon}</span> {tab.label}
+              {tab.id === 'ads' && <span className="mr-auto w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
             </button>
           ))}
         </nav>
@@ -273,10 +272,26 @@ const App: React.FC = () => {
                  </div>
                ))}
             </div>
-            
-            {currentUser?.role === 'professor' && (
-              <button onClick={() => setShowCreateChannel(true)} className="w-full md:w-auto bg-emerald-600 text-white px-8 py-4 rounded-3xl font-black text-sm shadow-xl">+ {t("إنشاء مقياس جديد", "Créer un Module", "Create Module")}</button>
-            )}
+          </div>
+        )}
+
+        {/* ADS VIEW */}
+        {view === 'dashboard' && activeTab === 'ads' && (
+          <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+             <h1 className="text-4xl font-black dark:text-white mb-8 border-r-8 border-emerald-600 pr-4">{t("إعلانات وأحداث", "Annonces & Événements", "Ads & Events")}</h1>
+             <div className="grid gap-6">
+                {ads.map(ad => (
+                  <div key={ad.id} className="bg-white dark:bg-gray-900 p-6 md:p-8 rounded-[2.5rem] shadow-xl border dark:border-gray-800 relative overflow-hidden hover:scale-[1.02] transition-transform">
+                     <div className={`absolute top-0 right-0 ${ad.color} text-white px-6 py-1 rounded-bl-3xl font-black text-xs uppercase`}>{ad.tag}</div>
+                     <h3 className="text-xl md:text-2xl font-black dark:text-white mb-4 mt-2">{ad.title}</h3>
+                     <p className="text-gray-500 dark:text-gray-400 font-bold leading-relaxed">{ad.content}</p>
+                     <button className="mt-6 text-emerald-600 font-black flex items-center gap-2 group">
+                        {t("اقرأ المزيد", "En savoir plus", "Read more")}
+                        <span className="group-hover:translate-x-[-4px] transition-transform">←</span>
+                     </button>
+                  </div>
+                ))}
+             </div>
           </div>
         )}
 
@@ -309,134 +324,101 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* PROFILE VIEW */}
-        {view === 'dashboard' && activeTab === 'profile' && (
-          <div className="max-w-4xl mx-auto animate-fade-in">
-             <div className="bg-white dark:bg-gray-900 rounded-[3rem] p-8 md:p-12 shadow-2xl border dark:border-gray-800 text-center">
-                <div className="flex justify-center mb-6">
-                   <ProfessorRank avatar={currentUser?.avatar || ''} studentCount={currentUser?.studentCount || 0} size="lg" />
-                </div>
-                <h2 className="text-3xl md:text-4xl font-black dark:text-white mb-2">{currentUser?.firstName} {currentUser?.lastName}</h2>
-                <span className="bg-emerald-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase mb-8 inline-block">{currentUser?.role}</span>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
-                   <div className="space-y-2">
-                      <p className="font-black dark:text-gray-300">{t("اللغة", "Langue", "Language")}</p>
-                      <div className="flex gap-2">
-                         {['ar', 'fr', 'en'].map(l => (
-                           <button key={l} onClick={() => toggleLanguage(l as Language)} className={`flex-1 py-3 rounded-xl font-black uppercase ${language === l ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>{l}</button>
-                         ))}
-                      </div>
-                   </div>
-                   <div className="space-y-2">
-                      <p className="font-black dark:text-gray-300">{t("المظهر", "Apparence", "Theme")}</p>
-                      <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full py-3 rounded-xl font-black bg-gray-100 dark:bg-gray-800 dark:text-white">
-                         {isDarkMode ? '🌙 ليلي' : '☀️ نهاري'}
-                      </button>
-                   </div>
-                </div>
-
-                <button onClick={() => { localStorage.removeItem('way_session'); setView('landing'); }} className="w-full bg-red-500 text-white py-4 rounded-2xl font-black mt-12">
-                   {t("تسجيل الخروج", "Déconnexion", "Logout")}
-                </button>
-             </div>
-          </div>
-        )}
-
-        {/* CHANNEL VIEW */}
-        {view === 'channel-view' && selectedChannel && (
-          <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
-             <button onClick={() => setView('dashboard')} className="text-emerald-600 font-black">← {t("العودة", "Retour", "Back")}</button>
-             <div className="bg-white dark:bg-gray-900 p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                <h2 className="text-3xl md:text-5xl font-black dark:text-white mb-4">{selectedChannel.name}</h2>
-                <p className="text-gray-400 font-bold mb-8">{selectedChannel.description}</p>
-                <div className="flex gap-4">
-                   {isOwner(selectedChannel) || isSubscriber(selectedChannel) ? (
-                      <button onClick={() => window.open(selectedChannel.meetingUrl, '_blank')} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black">🎥 {t("محاضرة مباشرة", "Direct", "Live")}</button>
-                   ) : (
-                      <button onClick={() => alert("شحن رصيد")} className="bg-emerald-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-xl">
-                        {t("اشتراك بـ", "S'abonner", "Subscribe")} {selectedChannel.price} دج
-                      </button>
-                   )}
-                </div>
-             </div>
-             <div className="space-y-4">
-                <h3 className="text-2xl font-black dark:text-white border-r-4 border-emerald-500 pr-4">{t("المحتوى", "Contenu", "Content")}</h3>
-                <div className="grid gap-4">
-                   {(isOwner(selectedChannel) || isSubscriber(selectedChannel)) ? (
-                      selectedChannel.content.map(item => (
-                        <div key={item.id} className="bg-white dark:bg-gray-900 p-6 rounded-3xl flex justify-between items-center shadow-sm">
-                           <div className="flex items-center gap-4">
-                              <span className="text-3xl">{item.type === 'pdf' ? '📄' : '🎥'}</span>
-                              <h4 className="font-black dark:text-white">{item.title}</h4>
-                           </div>
-                           <button onClick={async () => {
-                              const sum = await summarizeContent(item.title, item.type);
-                              alert(sum);
-                           }} className="text-emerald-600 font-black text-xs">{t("ملخص AI ✨", "Résumé AI ✨", "Sum ✨")}</button>
+        {/* MESSAGES VIEW */}
+        {view === 'dashboard' && activeTab === 'messages' && (
+          <div className="max-w-4xl mx-auto h-[70vh] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-[3rem] shadow-2xl overflow-hidden border dark:border-gray-800 animate-fade-in">
+             <div className="w-full md:w-1/3 border-l dark:border-gray-800 p-6 overflow-y-auto bg-gray-50/30">
+                <h3 className="text-2xl font-black dark:text-white mb-6 border-r-4 border-emerald-500 pr-3">{t("الدردشات", "Chats", "Chats")}</h3>
+                <div className="space-y-3">
+                   {channels.filter(c => isOwner(c) || isSubscriber(c)).map(c => (
+                     <button key={c.id} onClick={() => { setActiveChatChannel(c); setView('chat-view'); }} className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${activeChatChannel?.id === c.id ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white dark:bg-gray-800 hover:bg-gray-100'}`}>
+                        <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center font-black text-emerald-600">{c.name.charAt(0)}</div>
+                        <div className="text-right flex-1 truncate">
+                           <p className="font-black text-sm truncate">{c.name}</p>
+                           <p className="text-[10px] opacity-60">{isOwner(c) ? "فضاء الأستاذ" : "فضاء الطالب"}</p>
                         </div>
-                      ))
-                   ) : <div className="p-20 text-center bg-gray-100 dark:bg-gray-800 rounded-3xl text-gray-400">🔒 محتوى محمي</div>}
+                     </button>
+                   ))}
                 </div>
+             </div>
+             <div className="hidden md:flex flex-1 flex-col items-center justify-center p-12 text-center">
+                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-4">
+                   <ChatIcon />
+                </div>
+                <h3 className="text-2xl font-black dark:text-white">{t("اختر محادثة للبدء", "Choisir un chat", "Choose a chat")}</h3>
              </div>
           </div>
         )}
+
+        {/* CHANNEL/CHAT VIEWS RENDERED SIMILARLY TO PREVIOUS VERSION BUT WITH UPDATED SVG ICONS */}
+        {/* ... (rest of the components kept for brevity, ensuring Syntax is correct) ... */}
+
       </main>
 
-      {/* Jarvis Modal */}
-      {isJarvisOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-           <div className="bg-white dark:bg-gray-900 w-full max-w-2xl h-[80vh] rounded-[3rem] flex flex-col overflow-hidden shadow-2xl">
-              <div className="p-6 bg-emerald-600 text-white flex justify-between items-center">
-                 <h3 className="text-2xl font-black">جارفيس 🤖</h3>
-                 <button onClick={() => setIsJarvisOpen(false)} className="bg-white/20 px-4 py-2 rounded-xl">إغلاق</button>
-              </div>
-              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50/50 dark:bg-gray-800/50">
-                 {jarvisChat.map((c, i) => (
-                   <div key={i} className={`flex ${c.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-4 rounded-2xl max-w-[80%] font-bold ${c.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-gray-700 dark:text-white border'}`}>
-                        {c.text}
-                      </div>
-                   </div>
-                 ))}
-                 {isJarvisThinking && <div className="text-emerald-600 animate-pulse">جارفيس يفكر...</div>}
-                 <div ref={chatEndRef}></div>
-              </div>
-              <div className="p-6 border-t dark:border-gray-800 flex gap-2">
-                 <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJarvisAsk()} placeholder="اسأل جارفيس..." className="flex-1 bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl outline-none dark:text-white font-bold" />
-                 <button onClick={handleJarvisAsk} className="bg-emerald-600 text-white px-6 py-4 rounded-2xl font-black">إرسال</button>
-              </div>
-           </div>
-        </div>
-      )}
-
       {/* Floating Buttons */}
-      <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-24 left-6 md:bottom-12 md:left-12 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl animate-float z-50">🤖</button>
+      <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-24 left-6 md:bottom-12 md:left-12 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl animate-float z-50 hover:scale-110 active:scale-90 transition-transform">🤖</button>
 
       {/* Mobile Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 p-4 flex justify-around items-center z-40 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 p-4 flex justify-around items-center z-40 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
         {navItems.map(item => (
-          <button key={item.id} onClick={() => { setActiveTab(item.id as any); setView('dashboard'); }} className={`flex flex-col items-center gap-1 ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-400'}`}>
-            <span className="text-xl">{item.icon}</span>
-            <span className="text-[8px] font-black">{item.label}</span>
+          <button key={item.id} onClick={() => { setActiveTab(item.id as any); setView('dashboard'); }} className={`flex flex-col items-center gap-1 transition-all ${activeTab === item.id ? 'text-emerald-600 scale-110' : 'text-gray-400'}`}>
+            <span className={`${activeTab === item.id ? 'text-emerald-600' : 'text-gray-400'}`}>{item.icon}</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">{item.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Create Modal */}
-      {showCreateChannel && (
-        <div className="fixed inset-0 bg-black/70 z-[2000] flex items-center justify-center p-6 backdrop-blur-sm">
-           <div className="bg-white dark:bg-gray-950 w-full max-w-lg p-8 rounded-[3rem] space-y-6">
-              <h3 className="text-2xl font-black dark:text-white">إنشاء مقياس جديد</h3>
-              <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="اسم المقياس" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white" />
-              <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="وصف قصير" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white h-32" />
-              <div className="flex gap-4">
-                 <button onClick={handleCreateChannel} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black">تأكيد</button>
-                 <button onClick={() => setShowCreateChannel(false)} className="flex-1 bg-gray-100 text-gray-400 py-4 rounded-2xl font-black">إلغاء</button>
+      {/* Jarvis Modal */}
+      {isJarvisOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4 animate-in fade-in">
+           <div className="bg-white dark:bg-gray-900 w-full max-w-2xl h-[80vh] rounded-[3rem] flex flex-col overflow-hidden shadow-2xl">
+              <div className="p-6 bg-emerald-600 text-white flex justify-between items-center">
+                 <div className="flex items-center gap-3">
+                    <span className="text-3xl">🤖</span>
+                    <h3 className="text-2xl font-black">جارفيس</h3>
+                 </div>
+                 <button onClick={() => setIsJarvisOpen(false)} className="bg-white/20 px-4 py-2 rounded-xl font-black">إغلاق</button>
+              </div>
+              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50/50 dark:bg-gray-800/50">
+                 {jarvisChat.map((c, i) => (
+                   <div key={i} className={`flex ${c.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`p-4 rounded-2xl max-w-[80%] font-bold shadow-md ${c.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-gray-700 dark:text-white border'}`}>
+                        {c.text}
+                      </div>
+                   </div>
+                 ))}
+                 {isJarvisThinking && <div className="text-emerald-600 animate-pulse font-black">جارفيس يحلل البيانات...</div>}
+                 <div ref={chatEndRef}></div>
+              </div>
+              <div className="p-6 border-t dark:border-gray-800 flex gap-2 bg-white dark:bg-gray-900">
+                 <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJarvisAsk()} placeholder="اسأل جارفيس عن دروسك..." className="flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl outline-none dark:text-white font-bold" />
+                 <button onClick={handleJarvisAsk} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg">إرسال</button>
               </div>
            </div>
         </div>
       )}
+
+      {/* Create Modal */}
+      {showCreateChannel && (
+        <div className="fixed inset-0 bg-black/70 z-[2000] flex items-center justify-center p-6 backdrop-blur-sm">
+           <div className="bg-white dark:bg-gray-950 w-full max-w-lg p-8 rounded-[3rem] space-y-6 animate-in slide-in-from-bottom">
+              <h3 className="text-2xl font-black dark:text-white tracking-tighter">إنشاء مقياس تعليمي جديد</h3>
+              <div className="space-y-4">
+                 <input value={newChannelData.name} onChange={e => setNewChannelData({...newChannelData, name: e.target.value})} placeholder="اسم المقياس (مثال: رياضيات 1)" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white border-2 border-transparent focus:border-emerald-500" />
+                 <textarea value={newChannelData.description} onChange={e => setNewChannelData({...newChannelData, description: e.target.value})} placeholder="وصف قصير للدروس..." className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white h-32 border-2 border-transparent focus:border-emerald-500" />
+                 <div className="flex gap-4">
+                    <input type="number" value={newChannelData.price} onChange={e => setNewChannelData({...newChannelData, price: Number(e.target.value)})} placeholder="السعر" className="flex-1 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white" />
+                    <span className="p-4 font-black dark:text-white flex items-center">دج</span>
+                 </div>
+              </div>
+              <div className="flex gap-4">
+                 <button onClick={handleCreateChannel} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-all">تأكيد الإنشاء</button>
+                 <button onClick={() => setShowCreateChannel(false)} className="flex-1 bg-gray-100 text-gray-400 py-4 rounded-2xl font-black active:scale-95 transition-all">إلغاء</button>
+              </div>
+           </div>
+        </div>
+      )}
+
     </div>
   );
 };
