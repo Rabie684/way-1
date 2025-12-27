@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Channel, ContentItem, ChatMessage, Language } from './types';
 import { UNIVERSITIES, FACULTIES, DEPARTMENTS } from './constants';
@@ -22,7 +21,6 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'ar');
   
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [filterUniv, setFilterUniv] = useState<string>('');
   const [filterFaculty, setFilterFaculty] = useState<string>('');
 
@@ -75,11 +73,6 @@ const App: React.FC = () => {
       setTimeout(() => setLoading(false), 800);
     };
     init();
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    });
   }, []);
 
   useEffect(() => { 
@@ -106,13 +99,6 @@ const App: React.FC = () => {
       setView('dashboard');
       setActiveTab('home');
     }
-  };
-
-  const handleInstallApp = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
   };
 
   const toggleLanguage = (l: Language) => {
@@ -219,12 +205,6 @@ const App: React.FC = () => {
             {t("دخول أستاذ", "Professeur", "Professor")}
           </button>
         </div>
-        
-        {deferredPrompt && (
-          <button onClick={handleInstallApp} className="mt-12 bg-white/20 text-white px-6 py-3 rounded-2xl font-black text-xs border border-white/30 animate-pulse active:scale-95">
-             📲 {t("تثبيت التطبيق على الشاشة الرئيسية", "Installer l'app", "Install App")}
-          </button>
-        )}
       </div>
     );
   }
@@ -259,12 +239,6 @@ const App: React.FC = () => {
             </button>
           ))}
         </nav>
-
-        {deferredPrompt && (
-          <button onClick={handleInstallApp} className="mt-4 bg-blue-600 text-white p-4 rounded-2xl font-black text-xs shadow-lg animate-pulse hover:bg-blue-700 transition-colors">
-            📲 {t("تثبيت التطبيق", "Installer l'app", "Install App")}
-          </button>
-        )}
 
         {currentUser?.role === 'professor' && (
           <div className="mt-auto border-t dark:border-gray-800 pt-6">
