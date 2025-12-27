@@ -3,124 +3,103 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, UserRole, Channel, ContentItem, ChatMessage, Medal } from './types';
 import { UNIVERSITIES, FACULTIES } from './constants';
 import ProfessorRank from './components/ProfessorRank';
-import { summarizeContent, jarvisAsk, JARVIS_SYSTEM_INSTRUCTION, getJarvisAI } from './services/geminiService';
-import { Modality } from '@google/genai';
+import { summarizeContent, jarvisAsk, JARVIS_SYSTEM_INSTRUCTION } from './services/geminiService';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase Configuration
+// Supabase Configuration - Safe initialization
 const supabaseUrl = 'https://xvcqkdytqbqkdxyiwmzx.supabase.co';
 const supabaseKey = process.env.API_KEY || ''; 
-const supabase = createClient(supabaseUrl, supabaseKey);
+let supabase: any = null;
+
+try {
+  if (supabaseUrl && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+} catch (e) {
+  console.error("Supabase initialization failed", e);
+}
 
 const App: React.FC = () => {
-  // Core State
+  // --- Core State ---
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<'landing' | 'register-student' | 'register-prof' | 'login' | 'dashboard' | 'channel-view'>('landing');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'home' | 'my-channels' | 'messages' | 'wallet' | 'profile'>('home');
+  
+  // Data State
   const [users, setUsers] = useState<User[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'my-channels' | 'messages' | 'wallet' | 'profile'>('home');
   
   // UI Preferences
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-  
-  // Filtering for Student
   const [filterUniv, setFilterUniv] = useState<string>('');
   const [filterFaculty, setFilterFaculty] = useState<string>('');
 
-  // Jarvis State
+  // Jarvis & Chat State
   const [isJarvisOpen, setIsJarvisOpen] = useState(false);
   const [isJarvisThinking, setIsJarvisThinking] = useState(false);
   const [jarvisChat, setJarvisChat] = useState<{role: 'user' | 'jarvis', text: string, sources?: any[]}[]>([]);
   const [jarvisInput, setJarvisInput] = useState('');
-
-  // File Upload State
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Chat State
   const [personalChats, setPersonalChats] = useState<Record<string, ChatMessage[]>>({}); 
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
 
-  // Forms State
+  // Modals & Upload
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showAddContent, setShowAddContent] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newChannelData, setNewChannelData] = useState({ name: '', department: '', description: '', price: 200 });
   const [newContentData, setNewContentData] = useState({ title: '', type: 'pdf' as 'pdf' | 'video' | 'image' });
 
-  // --- Functions declared early to avoid "used before declaration" ---
-
-  const fetchProfile = async (id: string) => {
-    const { data: profile } = await supabase.from('users').select('*').eq('id', id).single();
-    if (profile) {
-      setCurrentUser(profile);
-      setView('dashboard');
-    }
-  };
-
-  const handleSendPersonal = () => {
-    if (!chatInput.trim() || !currentUser || !activeChatUserId) return;
-    const key = [currentUser.id, activeChatUserId].sort().join('_');
-    const msg: ChatMessage = { 
-      id: Date.now().toString(), 
-      senderId: currentUser.id, 
-      senderName: currentUser.firstName, 
-      text: chatInput, 
-      timestamp: new Date() 
-    };
-    setPersonalChats(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
-    setChatInput('');
-  };
-
-  const handleJarvisSummarize = async (item: ContentItem) => {
-    setIsJarvisThinking(true);
-    setIsJarvisOpen(true);
-    setJarvisChat(prev => [...prev, { role: 'user', text: `يا جارفيس، لخصلي هاد المطلب الأكاديمي: ${item.title}` }]);
-    const summary = await summarizeContent(item.title, item.type);
-    setJarvisChat(prev => [...prev, { role: 'jarvis', text: summary || '...' }]);
-    setIsJarvisThinking(false);
-  };
-
-  const handleJarvisChat = async () => {
-    if (!jarvisInput.trim()) return;
-    const userText = jarvisInput;
-    setJarvisInput('');
-    setJarvisChat(prev => [...prev, { role: 'user', text: userText }]);
-    setIsJarvisThinking(true);
-    const res = await jarvisAsk(userText);
-    setJarvisChat(prev => [...prev, { role: 'jarvis', text: res.text || '', sources: res.sources }]);
-    setIsJarvisThinking(false);
-  };
-
   // --- Effects ---
-
   useEffect(() => {
-    const initApp = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) await fetchProfile(session.user.id);
-      
-      const { data: usersData } = await supabase.from('users').select('*');
-      if (usersData) setUsers(usersData);
-      
-      const { data: channelsData } = await supabase.from('channels').select('*');
-      if (channelsData) setChannels(channelsData);
-      setLoading(false);
+    const init = async () => {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+          if (profile) {
+            setCurrentUser(profile);
+            setView('dashboard');
+          }
+        }
+        
+        const { data: usersData } = await supabase.from('users').select('*');
+        if (usersData) setUsers(usersData);
+        
+        const { data: channelsData } = await supabase.from('channels').select('*');
+        if (channelsData) setChannels(channelsData);
+      } catch (err) {
+        console.error("Initialization error", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    initApp();
+    init();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) fetchProfile(session.user.id);
-      else {
+    const { data: authListener } = supabase?.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        supabase.from('users').select('*').eq('id', session.user.id).single().then(({ data }: any) => {
+          if (data) {
+            setCurrentUser(data);
+            setView('dashboard');
+          }
+        });
+      } else {
         setCurrentUser(null);
         setView('landing');
       }
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => authListener?.subscription.unsubscribe();
   }, []);
 
   useEffect(() => { 
@@ -129,8 +108,25 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   // --- Handlers ---
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) return;
+    const target = e.target as any;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: target.email.value,
+        password: target.password.value
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert("خطأ: " + err.message);
+      setLoading(false);
+    }
+  };
 
   const handleRegister = async (role: UserRole, data: any) => {
+    if (!supabase) return;
     setLoading(true);
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -153,9 +149,7 @@ const App: React.FC = () => {
         studentCount: 0
       };
 
-      const { error: dbError } = await supabase.from('users').insert([newUserProfile]);
-      if (dbError) throw dbError;
-
+      await supabase.from('users').insert([newUserProfile]);
       setCurrentUser(newUserProfile as User);
       setView('dashboard');
     } catch (err: any) {
@@ -165,85 +159,42 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = e.target as any;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: target.email.value,
-        password: target.password.value
-      });
-      if (error) throw error;
-      await fetchProfile(data.user.id);
-    } catch (err: any) {
-      alert("خطأ: " + err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleJarvisChat = async () => {
+    if (!jarvisInput.trim()) return;
+    const userText = jarvisInput;
+    setJarvisInput('');
+    setJarvisChat(prev => [...prev, { role: 'user', text: userText }]);
+    setIsJarvisThinking(true);
+    const res = await jarvisAsk(userText);
+    setJarvisChat(prev => [...prev, { role: 'jarvis', text: res.text || '', sources: res.sources }]);
+    setIsJarvisThinking(false);
   };
 
-  const handleCreateChannel = async () => {
-    if (!currentUser || !newChannelData.name.trim()) return;
-    setLoading(true);
-    const newChan = {
-      professorId: currentUser.id,
-      name: newChannelData.name,
-      description: newChannelData.description,
-      department: newChannelData.department,
-      price: newChannelData.price,
-      subscribers: [],
-      content: []
+  const handleJarvisSummarize = async (item: ContentItem) => {
+    setIsJarvisThinking(true);
+    setIsJarvisOpen(true);
+    setJarvisChat(prev => [...prev, { role: 'user', text: `يا جارفيس، لخصلي هاد الدرس: ${item.title}` }]);
+    const summary = await summarizeContent(item.title, item.type);
+    setJarvisChat(prev => [...prev, { role: 'jarvis', text: summary || '...' }]);
+    setIsJarvisThinking(false);
+  };
+
+  const handleSendPersonal = () => {
+    if (!chatInput.trim() || !currentUser || !activeChatUserId) return;
+    const key = [currentUser.id, activeChatUserId].sort().join('_');
+    const msg: ChatMessage = { 
+      id: Date.now().toString(), 
+      senderId: currentUser.id, 
+      senderName: currentUser.firstName, 
+      text: chatInput, 
+      timestamp: new Date() 
     };
-    
-    const { data, error } = await supabase.from('channels').insert([newChan]).select().single();
-    if (error) alert(error.message);
-    else {
-      setChannels(prev => [...prev, data]);
-      setShowCreateChannel(false);
-    }
-    setLoading(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      let type: any = 'pdf';
-      if (['png','jpg','jpeg','webp'].includes(ext!)) type = 'image';
-      else if (['mp4','mov','avi','webm'].includes(ext!)) type = 'video';
-      setNewContentData({ ...newContentData, title: file.name, type });
-    }
-  };
-
-  const handleAddContent = async () => {
-    if (!selectedFile || !selectedChannel) return;
-    setLoading(true);
-    const mockUrl = URL.createObjectURL(selectedFile);
-    const newItem: ContentItem = {
-      id: 'i' + Date.now(),
-      type: newContentData.type,
-      title: newContentData.title,
-      url: mockUrl,
-      createdAt: new Date()
-    };
-    
-    const updatedContent = [...(selectedChannel.content || []), newItem];
-    const { error } = await supabase.from('channels').update({ content: updatedContent }).eq('id', selectedChannel.id);
-    
-    if (error) alert(error.message);
-    else {
-      setChannels(prev => prev.map(c => c.id === selectedChannel.id ? { ...c, content: updatedContent } : c));
-      setSelectedChannel(prev => prev ? { ...prev, content: updatedContent } : null);
-      setShowAddContent(false);
-      setSelectedFile(null);
-    }
-    setLoading(false);
+    setPersonalChats(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
+    setChatInput('');
   };
 
   const handleSubscribe = async (channelId: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !supabase) return;
     const chan = channels.find(c => c.id === channelId);
     if (!chan) return;
 
@@ -269,67 +220,23 @@ const App: React.FC = () => {
     setLoading(false);
   };
 
-  const getSubscribedProfessors = () => {
-    if (!currentUser) return [];
-    const subscribedProfIds = channels
-      .filter(c => c.subscribers?.includes(currentUser.id))
-      .map(c => c.professorId);
-    return users.filter(u => u.role === 'professor' && subscribedProfIds.includes(u.id));
-  };
+  // --- Render Sections ---
 
-  // --- Render Helpers ---
-
-  const renderJarvis = () => (
-    <div className={`fixed inset-0 z-[120] flex items-end md:items-center justify-center p-0 md:p-6 transition-all duration-500 ${isJarvisOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsJarvisOpen(false)}></div>
-      <div className="relative bg-white dark:bg-gray-900 w-full md:max-w-2xl h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-        <div className="p-5 bg-emerald-600 text-white flex justify-between items-center">
-          <h3 className="font-black text-lg">✨ Jarvis الأكاديمي</h3>
-          <button onClick={() => setIsJarvisOpen(false)} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition">✕</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50 dark:bg-gray-950 no-scrollbar">
-          {jarvisChat.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl max-w-[85%] text-sm ${m.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 dark:text-white border dark:border-gray-700 rounded-tl-none shadow-sm'}`}>
-                {m.text}
-                {m.sources && m.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-[10px] opacity-70">
-                    <p className="font-black mb-1">المصادر الموثوقة:</p>
-                    <ul className="space-y-1">
-                      {m.sources.map((s, idx) => s.web && <li key={idx}><a href={s.web.uri} target="_blank" rel="noreferrer" className="underline text-emerald-500">{s.web.title || s.web.uri}</a></li>)}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {isJarvisThinking && <div className="text-xs text-emerald-600 animate-pulse font-black px-4">جارفيس يقوم بالبحث...</div>}
-        </div>
-        <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-2">
-          <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder="اسأل عن أي معلومة أكاديمية..." className="flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none focus:ring-2 ring-emerald-500 transition-all" />
-          <button onClick={handleJarvisChat} className="bg-emerald-600 text-white px-6 rounded-2xl font-black">🚀</button>
-        </div>
+  const renderLanding = () => (
+    <div className="min-h-screen bg-emerald-600 flex flex-col items-center justify-center text-white p-6 text-center">
+      <div className="animate-float mb-12">
+        <h1 className="text-9xl font-black tracking-tighter mb-2">WAY</h1>
+        <p className="text-xl opacity-80 font-bold">جامعتك الرقمية أينما كنت</p>
+      </div>
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        <button onClick={() => setView('register-prof')} className="bg-white text-emerald-600 py-5 rounded-3xl font-black text-lg shadow-2xl btn-active">أنا أستاذ</button>
+        <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white py-5 rounded-3xl font-black text-lg border-2 border-emerald-400 shadow-2xl btn-active">أنا طالب</button>
+        <button onClick={() => setView('login')} className="mt-6 text-emerald-100 font-bold hover:underline">لديك حساب؟ سجل دخولك</button>
       </div>
     </div>
   );
 
-  if (view === 'landing') {
-    return (
-      <div className="min-h-screen bg-emerald-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <div className="animate-float mb-12">
-          <h1 className="text-9xl font-black tracking-tighter mb-2">WAY</h1>
-          <p className="text-xl opacity-80 font-bold">جامعتك الرقمية أينما كنت</p>
-        </div>
-        <div className="flex flex-col gap-4 w-full max-w-sm">
-          <button onClick={() => setView('register-prof')} className="bg-white text-emerald-600 py-5 rounded-3xl font-black text-lg shadow-2xl hover:scale-105 transition-all">أنا أستاذ</button>
-          <button onClick={() => setView('register-student')} className="bg-emerald-500 text-white py-5 rounded-3xl font-black text-lg border-2 border-emerald-400 shadow-2xl hover:scale-105 transition-all">أنا طالب</button>
-          <button onClick={() => setView('login')} className="mt-6 text-emerald-100 font-bold hover:underline">لديك حساب؟ سجل دخولك</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'register-student' || view === 'register-prof' || view === 'login') {
+  const renderAuthForm = () => {
     const isReg = view.startsWith('register');
     const isProfView = view === 'register-prof';
     return (
@@ -368,19 +275,20 @@ const App: React.FC = () => {
                 </select>
               </>
             )}
-            <button type="submit" disabled={loading} className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-lg">
-              {loading ? 'جاري التحميل...' : (view === 'login' ? 'دخول' : 'بدء الرحلة')}
+            <button type="submit" className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition">
+              {view === 'login' ? 'دخول' : 'بدء الرحلة'}
             </button>
             <button type="button" onClick={() => setView('landing')} className="w-full text-gray-400 font-bold text-sm">رجوع</button>
           </form>
         </div>
       </div>
     );
-  }
+  };
 
-  if (currentUser && view === 'dashboard') {
-    const isProfUser = currentUser.role === 'professor';
-    const tabs = isProfUser ? [
+  const renderDashboard = () => {
+    if (!currentUser) return null;
+    const isProf = currentUser.role === 'professor';
+    const tabs = isProf ? [
       {id:'home', l:'الرئيسية', i:'🏠'},
       {id:'messages', l:'الرسائل', i:'💬'},
       {id:'wallet', l:'المحفظة', i:'💰'},
@@ -395,7 +303,7 @@ const App: React.FC = () => {
 
     return (
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-950 text-right">
-        {/* Desktop Sidebar */}
+        {/* Sidebar */}
         <aside className="hidden md:flex w-72 bg-white dark:bg-gray-900 border-l dark:border-gray-800 p-8 flex-col gap-10 shadow-2xl">
           <h2 className="text-4xl font-black text-emerald-600 text-center tracking-tighter">WAY</h2>
           <nav className="flex flex-col gap-3">
@@ -407,250 +315,154 @@ const App: React.FC = () => {
           </nav>
         </aside>
 
-        {/* Mobile Navbar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex justify-around p-3 z-[100] pb-safe shadow-lg">
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`flex flex-col items-center gap-1 p-2 ${activeTab === t.id ? 'text-emerald-600 scale-110' : 'text-gray-400'}`}>
-              <span className="text-2xl">{t.i}</span>
-              <span className="text-[10px] font-black">{t.l}</span>
-            </button>
-          ))}
-        </nav>
-
         {/* Jarvis FAB */}
-        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-28 right-6 md:bottom-10 md:right-10 z-[110] w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center animate-bounce border-4 border-white dark:border-gray-800">
+        <button onClick={() => setIsJarvisOpen(true)} className="fixed bottom-28 right-6 md:bottom-10 md:right-10 z-[110] w-16 h-16 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center border-4 border-white dark:border-gray-800">
           <span className="text-3xl">✨</span>
         </button>
-        {renderJarvis()}
 
-        <main className="flex-1 p-6 md:p-12 overflow-y-auto pb-32 no-scrollbar">
-          {activeTab === 'home' && (
-            <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in">
-              <header className="flex flex-col gap-1">
-                 <h1 className="text-4xl font-black dark:text-white">أهلاً، {currentUser.firstName} 👋</h1>
-                 <p className="text-emerald-600 font-bold tracking-widest text-xs uppercase">{currentUser.role === 'professor' ? 'حساب الأستاذ' : 'حساب الطالب'}</p>
-              </header>
-              
-              {!isProfUser && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm border dark:border-gray-800">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400">الجامعة</label>
-                    <select value={filterUniv} onChange={e => setFilterUniv(e.target.value)} className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 dark:text-white border outline-none font-bold">
-                      <option value="">كل الجامعات</option>
-                      {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400">الكلية</label>
-                    <select value={filterFaculty} onChange={e => setFilterFaculty(e.target.value)} className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 dark:text-white border outline-none font-bold">
-                      <option value="">كل الكليات</option>
-                      {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {isProfUser ? (
-                <div className="space-y-6">
-                  <button onClick={() => setShowCreateChannel(true)} className="w-full bg-emerald-600 text-white p-8 rounded-[2.5rem] font-black text-2xl shadow-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-4">
-                    <span>➕</span> إنشاء مادة جديدة
-                  </button>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {channels.filter(c => c.professorId === currentUser.id).map(c => (
-                      <div key={c.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border dark:border-gray-800 shadow-sm hover:shadow-xl transition-all">
-                        <div className="flex justify-between items-start mb-6">
-                           <div>
-                              <h4 className="font-black text-xl dark:text-white">{c.name}</h4>
-                              <p className="text-xs text-gray-400 font-bold uppercase">{c.department}</p>
-                           </div>
-                           <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black">{c.subscribers?.length || 0} طالب</span>
-                        </div>
-                        <button onClick={() => { setSelectedChannel(c); setView('channel-view'); }} className="w-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 py-4 rounded-2xl font-black">إدارة المحتوى</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <h3 className="font-black text-xl dark:text-white px-2">الأساتذة المقترحون</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {users.filter(u => u.role === 'professor' && (!filterUniv || u.university === filterUniv) && (!filterFaculty || u.faculty === filterFaculty)).map(prof => (
-                      <div key={prof.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border dark:border-gray-800 text-center space-y-4 hover:border-emerald-500 transition-all shadow-sm">
-                        <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="md" />
-                        <h4 className="font-black text-lg dark:text-white">{prof.firstName} {prof.lastName}</h4>
-                        <button onClick={() => {
-                             const chan = channels.find(c => c.professorId === prof.id);
-                             if (chan) { setSelectedChannel(chan); setView('channel-view'); }
-                             else alert("الأستاذ لم يرفع مواداً بعد.");
-                           }} className="w-full bg-emerald-600 text-white py-3 rounded-xl text-xs font-black">تصفح المواد</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'my-channels' && !isProfUser && (
-            <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-left">
-              <h2 className="text-3xl font-black dark:text-white">قنواتي 📡</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {channels.filter(c => c.subscribers?.includes(currentUser.id)).map(c => (
-                  <div key={c.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border dark:border-gray-800 flex justify-between items-center shadow-sm">
-                    <div>
-                      <h4 className="font-black text-xl dark:text-white">{c.name}</h4>
-                      <p className="text-xs text-emerald-600 font-bold uppercase">{c.department}</p>
+        {/* Jarvis Overlay */}
+        {isJarvisOpen && (
+          <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center p-0 md:p-6">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsJarvisOpen(false)}></div>
+            <div className="relative bg-white dark:bg-gray-900 w-full md:max-w-2xl h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+              <div className="p-5 bg-emerald-600 text-white flex justify-between items-center">
+                <h3 className="font-black text-lg">✨ Jarvis الأكاديمي</h3>
+                <button onClick={() => setIsJarvisOpen(false)}>✕</button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50 dark:bg-gray-950 no-scrollbar">
+                {jarvisChat.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-4 rounded-2xl max-w-[85%] text-sm ${m.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 dark:text-white border dark:border-gray-700 rounded-tl-none shadow-sm'}`}>
+                      {m.text}
                     </div>
-                    <button onClick={() => { setSelectedChannel(c); setView('channel-view'); }} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black">دخول</button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'messages' && (
-            <div className="max-w-6xl mx-auto h-[75vh] flex bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border dark:border-gray-800 overflow-hidden">
-               <div className="w-1/3 border-l dark:border-gray-800 flex flex-col">
-                  <div className="p-6 font-black text-emerald-600 border-b dark:border-gray-800 text-xl">المحادثات</div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar">
-                    {(isProfUser ? users.filter(u => u.role === 'student') : getSubscribedProfessors()).map(u => (
-                      <button key={u.id} onClick={() => setActiveChatUserId(u.id)} className={`w-full p-6 text-right flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border-b dark:border-gray-800 ${activeChatUserId === u.id ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
-                         <ProfessorRank avatar={u.avatar} studentCount={u.studentCount || 0} size="sm" />
-                         <div>
-                           <p className="font-black dark:text-white text-sm">{u.firstName} {u.lastName}</p>
-                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{u.role === 'professor' ? 'أستاذ' : 'طالب'}</p>
-                         </div>
-                      </button>
-                    ))}
-                  </div>
-               </div>
-               <div className="flex-1 flex flex-col bg-gray-50/20 dark:bg-gray-950/20 relative">
-                  {activeChatUserId ? (
-                    <>
-                      <div className="flex-1 overflow-y-auto p-6 space-y-4 pb-28 custom-scrollbar">
-                        {(personalChats[[currentUser.id, activeChatUserId].sort().join('_')] || []).map((m, i) => (
-                          <div key={i} className={`flex ${m.senderId === currentUser.id ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2`}>
-                            <div className={`p-4 rounded-2xl max-w-[75%] shadow-sm text-sm font-bold ${m.senderId === currentUser.id ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 dark:text-white rounded-tl-none'}`}>
-                              {m.text}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-5 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-3">
-                        <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSendPersonal()} placeholder="اكتب رسالة..." className="flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none focus:ring-2 ring-emerald-500 transition-all" />
-                        <button onClick={handleSendPersonal} className="bg-emerald-600 text-white px-8 rounded-2xl font-black">إرسال</button>
-                      </div>
-                    </>
-                  ) : <div className="flex-1 flex flex-col items-center justify-center opacity-10 gap-4"><span className="text-9xl">💬</span><p className="text-3xl font-black">اختر محادثة</p></div>}
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'profile' && (
-            <div className="max-w-2xl mx-auto space-y-8 animate-in zoom-in">
-              <div className="bg-white dark:bg-gray-900 p-10 rounded-[3rem] border dark:border-gray-800 shadow-sm text-center space-y-6">
-                 <ProfessorRank avatar={currentUser.avatar} studentCount={currentUser.studentCount || 0} size="lg" />
-                 <div>
-                    <h2 className="text-3xl font-black dark:text-white">{currentUser.firstName} {currentUser.lastName}</h2>
-                    <p className="text-emerald-600 font-bold">{currentUser.email}</p>
-                    <p className="text-gray-400 text-xs mt-2 font-black uppercase">{currentUser.university} • {currentUser.faculty}</p>
-                 </div>
-                 
-                 <div className="pt-6 grid grid-cols-1 gap-4">
-                    <div className="flex justify-between items-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-[2rem] border dark:border-gray-800">
-                       <span className="font-black dark:text-white">الوضع الليلي</span>
-                       <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full relative transition-colors p-1 ${isDarkMode ? 'bg-emerald-600' : 'bg-gray-300'}`}>
-                          <div className={`w-6 h-6 bg-white rounded-full transition-all shadow-lg ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                       </button>
-                    </div>
-                    <button onClick={async () => { await supabase.auth.signOut(); }} className="w-full text-red-500 font-black py-5 bg-red-50 dark:bg-red-950/20 rounded-[2rem] border border-red-100 dark:border-red-900/20">تسجيل الخروج</button>
-                 </div>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    );
-  }
-
-  if (view === 'channel-view' && selectedChannel && currentUser) {
-    const isChannelOwner = selectedChannel.professorId === currentUser.id;
-    const isUserSubscribed = selectedChannel.subscribers?.includes(currentUser.id);
-
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col text-right">
-        {showAddContent && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <div className="bg-white dark:bg-gray-900 w-full max-w-lg p-10 rounded-[2.5rem] shadow-2xl space-y-6">
-              <h3 className="text-2xl font-black text-emerald-600">رفع درس جديد</h3>
-              <div className="space-y-4">
-                 <input value={newContentData.title} onChange={e => setNewContentData({...newContentData, title: e.target.value})} placeholder="عنوان الدرس..." className="w-full bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl outline-none dark:text-white" />
-                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                 <button onClick={() => fileInputRef.current?.click()} className="w-full p-10 border-4 border-dashed border-emerald-100 rounded-3xl flex flex-col items-center gap-3">
-                   <span className="text-5xl">📁</span>
-                   <span className="font-black text-emerald-700">{selectedFile ? selectedFile.name : 'اختر ملفاً'}</span>
-                 </button>
-              </div>
-              <div className="flex gap-3 pt-4">
-                 <button onClick={handleAddContent} disabled={loading || !selectedFile} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black">{loading ? 'جاري الرفع...' : 'نشر'}</button>
-                 <button onClick={() => setShowAddContent(false)} className="flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl font-black dark:text-white">إلغاء</button>
+              <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex gap-2">
+                <input value={jarvisInput} onChange={e => setJarvisInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleJarvisChat()} placeholder="اسأل جارفيس..." className="flex-1 bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl dark:text-white outline-none" />
+                <button onClick={handleJarvisChat} className="bg-emerald-600 text-white px-6 rounded-2xl font-black">🚀</button>
               </div>
             </div>
           </div>
         )}
 
-        <header className="bg-white dark:bg-gray-900 p-5 shadow-lg flex justify-between items-center sticky top-0 z-50">
-           <button onClick={() => setView('dashboard')} className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 px-5 py-2 rounded-xl font-black">✕ رجوع</button>
-           <h2 className="font-black text-xl dark:text-white">{selectedChannel.name}</h2>
-           <div className="w-20"></div>
-        </header>
-
-        <main className="flex-1 p-6 md:p-12 overflow-y-auto space-y-6 max-w-5xl mx-auto w-full pb-32">
-          {!isChannelOwner && !isUserSubscribed ? (
-            <div className="bg-white dark:bg-gray-900 p-12 rounded-[3rem] text-center space-y-6 shadow-xl border-4 border-emerald-50">
-               <span className="text-8xl block">🔒</span>
-               <h3 className="text-2xl font-black dark:text-white">هذا المحتوى للمشتركين فقط</h3>
-               <button onClick={() => handleSubscribe(selectedChannel.id)} disabled={loading} className="bg-emerald-600 text-white px-12 py-5 rounded-[2rem] font-black text-xl">
-                 {loading ? 'تحميل...' : `اشترك بـ ${selectedChannel.price} دج`}
+        <main className="flex-1 p-6 md:p-12 overflow-y-auto pb-32">
+          {activeTab === 'home' && (
+            <div className="max-w-5xl mx-auto space-y-8">
+              <h1 className="text-4xl font-black dark:text-white">أهلاً، {currentUser.firstName} 👋</h1>
+              {isProf ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {channels.filter(c => c.professorId === currentUser.id).map(c => (
+                    <div key={c.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border dark:border-gray-800 shadow-sm">
+                      <h4 className="font-black text-xl dark:text-white">{c.name}</h4>
+                      <button onClick={() => { setSelectedChannel(c); setView('channel-view'); }} className="mt-4 w-full bg-emerald-50 text-emerald-600 py-3 rounded-xl font-black">إدارة</button>
+                    </div>
+                  ))}
+                  <button onClick={() => setShowCreateChannel(true)} className="bg-emerald-600 text-white p-8 rounded-[2rem] font-black text-xl shadow-xl">➕ مادة جديدة</button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {users.filter(u => u.role === 'professor').map(prof => (
+                    <div key={prof.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border dark:border-gray-800 text-center space-y-4 shadow-sm">
+                      <ProfessorRank avatar={prof.avatar} studentCount={prof.studentCount || 0} size="md" />
+                      <h4 className="font-black text-lg dark:text-white">{prof.firstName} {prof.lastName}</h4>
+                      <button onClick={() => {
+                        const chan = channels.find(c => c.professorId === prof.id);
+                        if (chan) { setSelectedChannel(chan); setView('channel-view'); }
+                        else alert("لا توجد مواد.");
+                      }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-black">المواد</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === 'profile' && (
+            <div className="max-w-xl mx-auto bg-white dark:bg-gray-900 p-10 rounded-[3rem] text-center space-y-6">
+               <ProfessorRank avatar={currentUser.avatar} studentCount={currentUser.studentCount || 0} size="lg" />
+               <h2 className="text-3xl font-black dark:text-white">{currentUser.firstName} {currentUser.lastName}</h2>
+               <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full bg-gray-100 dark:bg-gray-800 p-5 rounded-2xl font-black dark:text-white">
+                 {isDarkMode ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي'}
                </button>
+               <button onClick={() => supabase?.auth.signOut()} className="w-full text-red-500 font-black py-5 bg-red-50 rounded-2xl">خروج</button>
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Nav */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-800 flex justify-around p-3 z-[100] pb-safe">
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`flex flex-col items-center gap-1 ${activeTab === t.id ? 'text-emerald-600' : 'text-gray-400'}`}>
+              <span className="text-2xl">{t.i}</span>
+              <span className="text-[10px] font-black">{t.l}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    );
+  };
+
+  const renderChannelView = () => {
+    if (!selectedChannel || !currentUser) return null;
+    const isOwner = selectedChannel.professorId === currentUser.id;
+    const isSub = selectedChannel.subscribers?.includes(currentUser.id);
+
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col text-right">
+        <header className="bg-white dark:bg-gray-900 p-5 shadow-lg flex justify-between items-center">
+           <button onClick={() => setView('dashboard')} className="text-emerald-600 font-black">✕ رجوع</button>
+           <h2 className="font-black text-xl dark:text-white">{selectedChannel.name}</h2>
+           <div className="w-10"></div>
+        </header>
+        <main className="flex-1 p-6 space-y-4 max-w-4xl mx-auto w-full">
+          {!isOwner && !isSub ? (
+            <div className="bg-white dark:bg-gray-900 p-12 rounded-[3rem] text-center space-y-6">
+              <span className="text-8xl block">🔒</span>
+              <button onClick={() => handleSubscribe(selectedChannel.id)} className="bg-emerald-600 text-white px-12 py-5 rounded-[2rem] font-black text-xl">
+                اشترك بـ {selectedChannel.price} دج
+              </button>
             </div>
           ) : (
-            <>
-              {isChannelOwner && (
-                <button onClick={() => setShowAddContent(true)} className="w-full bg-white dark:bg-gray-900 border-4 border-dashed border-emerald-200 p-12 rounded-[3rem] text-emerald-600 font-black flex flex-col items-center gap-3">
-                  <span className="text-5xl">➕</span> رفع محتوى جديد
-                </button>
-              )}
-              
-              <div className="space-y-4">
-                {selectedChannel.content?.map(item => (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-                     <div className="flex gap-3 w-full md:w-auto">
-                       <button onClick={() => handleJarvisSummarize(item)} className="flex-1 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black">✨ تلخيص</button>
-                       <a href={item.url} target="_blank" rel="noreferrer" className="flex-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 px-6 py-3 rounded-2xl text-[10px] font-black text-center">📂 فتح</a>
-                     </div>
-                     <div className="flex items-center gap-4 text-right w-full md:w-auto">
-                        <div className="flex-1">
-                           <p className="font-black dark:text-white text-lg">{item.title}</p>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase">{item.type}</p>
-                        </div>
-                        <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl text-2xl">
-                           {item.type === 'pdf' ? '📄' : item.type === 'video' ? '🎥' : '🖼️'}
-                        </div>
-                     </div>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="space-y-4">
+               {selectedChannel.content?.map(item => (
+                 <div key={item.id} className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border dark:border-gray-800 flex justify-between items-center">
+                    <button onClick={() => handleJarvisSummarize(item)} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-xs font-black">✨ تلخيص</button>
+                    <div className="text-right">
+                       <p className="font-black dark:text-white">{item.title}</p>
+                       <p className="text-[10px] text-gray-400">{item.type}</p>
+                    </div>
+                 </div>
+               ))}
+            </div>
           )}
         </main>
       </div>
     );
-  }
+  };
+
+  // --- Main Render Controller ---
+  const renderContent = () => {
+    switch(view) {
+      case 'landing': return renderLanding();
+      case 'register-student':
+      case 'register-prof':
+      case 'login': return renderAuthForm();
+      case 'dashboard': return renderDashboard();
+      case 'channel-view': return renderChannelView();
+      default: return renderLanding();
+    }
+  };
 
   return (
-    <div className={`fixed inset-0 z-[200] flex items-center justify-center bg-white dark:bg-gray-950 transition-opacity ${loading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-       <div className="w-20 h-20 border-8 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+    <div className="min-h-screen">
+      {renderContent()}
+      
+      {/* Global Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
+          <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+        </div>
+      )}
     </div>
   );
 };
