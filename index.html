@@ -48,42 +48,18 @@
         100% { transform: translateY(0px); }
       }
 
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #10b981;
-        border-radius: 10px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #059669;
-      }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb:hover { background: #059669; }
       
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Mobile Safe Areas */
-      .mb-safe {
-        margin-bottom: env(safe-area-inset-bottom);
-      }
-      .pb-safe {
-        padding-bottom: env(safe-area-inset-bottom);
-      }
+      .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
       
-      /* Active states for mobile buttons */
-      .btn-active:active {
-        transform: scale(0.95);
-        opacity: 0.8;
-      }
+      .btn-active:active { transform: scale(0.95); opacity: 0.8; }
     </style>
     <script type="importmap">
 {
@@ -92,6 +68,7 @@
     "react-dom": "https://esm.sh/react-dom@^19.2.3",
     "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.1",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
