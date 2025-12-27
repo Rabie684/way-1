@@ -76,7 +76,11 @@ const App: React.FC = () => {
     if (currentUser) {
       localStorage.setItem('way_session', JSON.stringify(currentUser));
       // تحديث المستخدم في قائمة المستخدمين أيضاً
-      setUsers(prev => prev.map(u => u.id === currentUser.id ? currentUser : u));
+      if (!users.find(u => u.id === currentUser.id)) {
+        setUsers(prev => [...prev, currentUser]);
+      } else {
+        setUsers(prev => prev.map(u => u.id === currentUser.id ? currentUser : u));
+      }
     } else {
       localStorage.removeItem('way_session');
     }
@@ -128,6 +132,45 @@ const App: React.FC = () => {
       }
       setLoading(false);
     }, 500);
+  };
+
+  const handleQuickLogin = (role: 'student' | 'professor') => {
+    setLoading(true);
+    setTimeout(() => {
+      let quickUser: User;
+      if (role === 'student') {
+        quickUser = {
+          id: 'q_student_rabie',
+          firstName: 'حمر العين',
+          lastName: 'ربيع',
+          email: 'rabie@way.dz',
+          role: 'student',
+          university: 'USTHB',
+          faculty: 'التكنولوجيا',
+          walletBalance: 2500,
+          isApproved: true,
+          avatar: '',
+          studentCount: 0
+        };
+      } else {
+        quickUser = {
+          id: 'q_prof_bakhta',
+          firstName: 'بن الطاهر',
+          lastName: 'بختة',
+          email: 'bakhta@way.dz',
+          role: 'professor',
+          university: 'جامعة الجزائر 1',
+          faculty: 'الآداب واللغات',
+          walletBalance: 12000,
+          isApproved: true,
+          avatar: '',
+          studentCount: 45
+        };
+      }
+      setCurrentUser(quickUser);
+      setView('dashboard');
+      setLoading(false);
+    }, 600);
   };
 
   const handleLogout = () => {
@@ -224,7 +267,6 @@ const App: React.FC = () => {
 
   // --- View Renders ---
 
-  // Fix: Implemented renderJarvis to provide the UI for the AI assistant and resolve the compilation error
   const renderJarvis = () => {
     if (!isJarvisOpen) return null;
     return (
@@ -438,6 +480,34 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] shadow-2xl p-10 space-y-8 animate-in zoom-in duration-300">
           <h2 className="text-4xl font-black text-emerald-600 text-center">{view === 'login' ? 'مرحباً بعودتك' : 'انضم لـ WAY'}</h2>
+          
+          {view === 'login' && (
+            <div className="space-y-4">
+               <p className="text-xs font-black text-gray-400 text-center uppercase tracking-widest">دخول سريع للتجربة</p>
+               <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => handleQuickLogin('student')}
+                    className="flex flex-col items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-100 dark:border-emerald-800 rounded-2xl hover:bg-emerald-100 transition-all group"
+                  >
+                    <span className="text-3xl group-hover:scale-110 transition-transform">🎓</span>
+                    <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-400">حمر العين ربيع</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickLogin('professor')}
+                    className="flex flex-col items-center gap-2 p-4 bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-100 dark:border-blue-800 rounded-2xl hover:bg-blue-100 transition-all group"
+                  >
+                    <span className="text-3xl group-hover:scale-110 transition-transform">👩‍🏫</span>
+                    <span className="text-[10px] font-black text-blue-800 dark:text-blue-400">بن الطاهر بختة</span>
+                  </button>
+               </div>
+               <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
+                  <span className="flex-shrink mx-4 text-[10px] font-black text-gray-300">أو عبر النموذج</span>
+                  <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
+               </div>
+            </div>
+          )}
+
           <form className="space-y-4" onSubmit={view === 'login' ? handleLogin : (e:any) => {
             e.preventDefault();
             const d = {
