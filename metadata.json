@@ -1,21 +1,32 @@
 {
   "name": "WAY - الجامعية الرقمية",
   "short_name": "WAY",
-  "description": "منصة تعليمية جزائرية متكاملة تربط بين الأساتذة والطلاب مع نظام مكافآت ومحفظة إلكترونية لدعم المحتوى التعليمي.",
+  "description": "منصة تعليمية متكاملة تربط بين الأساتذة والطلاب في الجزائر.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "background_color": "#10b981",
   "theme_color": "#10b981",
+  "categories": [
+    "education",
+    "social"
+  ],
   "icons": [
     {
       "src": "https://img.icons8.com/fluency/512/education.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://img.icons8.com/fluency/192/education.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://placehold.jp/10b981/ffffff/512x512.png?text=way&font=black-han-sans",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ],

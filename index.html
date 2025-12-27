@@ -1,17 +1,22 @@
-
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>WAY - جامعتك الرقمية</title>
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WAY App">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#10b981">
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/512/education.png">
     <link rel="manifest" href="metadata.json">
     
+    <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script>
@@ -26,11 +31,16 @@
               'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'float': 'float 4s ease-in-out infinite',
               'shimmer': 'shimmer 2s linear infinite',
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
             },
             keyframes: {
               shimmer: {
                 '0%': { backgroundPosition: '-200% 0' },
                 '100%': { backgroundPosition: '200% 0' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
               }
             },
             spacing: {
@@ -41,21 +51,28 @@
       }
     </script>
     <style>
+      :root {
+        --emerald-500: #10b981;
+      }
       body {
         font-family: 'Cairo', sans-serif;
         background-color: #f8fafc;
         transition: background-color 0.3s ease, color 0.3s ease;
         -webkit-tap-highlight-color: transparent;
         overflow-x: hidden;
+        overscroll-behavior-y: contain;
       }
       .dark body {
         background-color: #030712;
       }
-      .aura-red { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.4); }
-      .aura-orange { box-shadow: 0 0 15px 5px rgba(249, 115, 22, 0.4); }
-      .aura-green { box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.4); }
-      .aura-blue { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.4); }
       
+      /* PWA Enhancements */
+      @media all and (display-mode: standalone) {
+        body {
+          padding-top: env(safe-area-inset-top);
+        }
+      }
+
       @keyframes float {
         0% { transform: translateY(0px); }
         50% { transform: translateY(-12px); }
@@ -65,7 +82,6 @@
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: #059669; }
       
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -92,8 +108,24 @@
 }
 </script>
   </head>
-  <body class="transition-colors duration-300">
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
+    
+    <!-- Service Worker for PWA compliance -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // استخدام مسار كامل لضمان المطابقة مع الأصل الحالي وتجنب مشاكل بيئات المعاينة
+          const swPath = new URL('sw.js', window.location.href).href;
+          navigator.serviceWorker.register(swPath)
+            .then(reg => console.log('Service Worker Registered at:', reg.scope))
+            .catch(err => {
+              console.warn('Service Worker registration skipped or failed:', err.message);
+              // ملاحظة: في بعض بيئات المعاينة (Sandbox) قد يتم حظر الـ Service Worker برمجياً من المتصفح
+            });
+        });
+      }
+    </script>
   </body>
 </html>
