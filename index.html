@@ -116,13 +116,11 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // استخدام مسار كامل لضمان المطابقة مع الأصل الحالي وتجنب مشاكل بيئات المعاينة
-          const swPath = new URL('sw.js', window.location.href).href;
-          navigator.serviceWorker.register(swPath)
+          // استخدام مسار نسبي مباشر لتجنب أخطاء بناء URL
+          navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('Service Worker Registered at:', reg.scope))
             .catch(err => {
               console.warn('Service Worker registration skipped or failed:', err.message);
-              // ملاحظة: في بعض بيئات المعاينة (Sandbox) قد يتم حظر الـ Service Worker برمجياً من المتصفح
             });
         });
       }
