@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>WAY - جامعتك الرقمية</title>
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="metadata.json">
+    <meta name="theme-color" content="#10b981">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/education.png">
+
     <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -19,64 +24,34 @@
             animation: {
               'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'float': 'float 4s ease-in-out infinite',
-              'shimmer': 'shimmer 2s linear infinite',
               'fade-in': 'fadeIn 0.5s ease-out forwards',
             },
             keyframes: {
-              shimmer: {
-                '0%': { backgroundPosition: '-200% 0' },
-                '100%': { backgroundPosition: '200% 0' },
-              },
               fadeIn: {
                 '0%': { opacity: '0', transform: 'translateY(10px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               }
-            },
-            spacing: {
-              'safe': 'env(safe-area-inset-bottom)',
             }
           },
         },
       }
     </script>
     <style>
-      :root {
-        --emerald-500: #10b981;
-      }
       body {
         font-family: 'Cairo', sans-serif;
         background-color: #f8fafc;
-        transition: background-color 0.3s ease, color 0.3s ease;
         -webkit-tap-highlight-color: transparent;
-        overflow-x: hidden;
         overscroll-behavior-y: contain;
       }
-      .dark body {
-        background-color: #030712;
-      }
-
+      .dark body { background-color: #030712; }
       @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-12px); }
-        100% { transform: translateY(0px); }
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
       }
-
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
-      
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-      .glass {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-      .dark .glass {
-        background: rgba(17, 24, 39, 0.7);
-      }
     </style>
+
     <script type="importmap">
 {
   "imports": {
@@ -94,5 +69,14 @@
   <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('WAY SW Registered'))
+            .catch(err => console.log('WAY SW Registration Failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
