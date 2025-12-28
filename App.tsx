@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Channel, ContentItem, ChatMessage, Language, UserRole } from './types';
-import { UNIVERSITIES } from './constants';
-import ProfessorRank from './components/ProfessorRank';
-import { jarvisAsk } from './services/geminiService';
+import { User, Channel, ContentItem, ChatMessage, Language, UserRole } from './types.ts'; // تم تغيير './types' إلى './types.ts'
+import { UNIVERSITIES } from './constants.ts'; // تم تغيير './constants' إلى './constants.ts'
+import ProfessorRank from './components/ProfessorRank.tsx'; // تم تغيير './components/ProfessorRank' إلى './components/ProfessorRank.tsx'
+import { jarvisAsk } from './services/geminiService.ts'; // تم تغيير './services/geminiService' إلى './services/geminiService.ts'
 
 interface Announcement {
   id: string;

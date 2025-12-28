@@ -1,6 +1,5 @@
-
 // Fix: Removed non-existent Aura member from types import as it is not defined in types.ts
-import { Medal } from './types';
+import { Medal } from './types.ts'; // تم تغيير './types' إلى './types.ts'
 
 export const getMedal = (count: number): Medal => {
   if (count > 150) return Medal.KING;

@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { Medal } from '../types';
-import { getMedal, getMedalColor, getAuraClass } from '../utils';
+import { Medal } from '../types.ts'; // تم تغيير '../types' إلى '../types.ts'
+import { getMedal, getMedalColor, getAuraClass } from '../utils.ts'; // تم تغيير '../utils' إلى '../utils.ts'
 
 interface Props {
   studentCount: number;
