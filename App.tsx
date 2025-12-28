@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Channel, ContentItem, ChatMessage, Language, UserRole } from './types.ts'; // تم تغيير './types' إلى './types.ts'
-import { UNIVERSITIES } from './constants.ts'; // تم تغيير './constants' إلى './constants.ts'
-import ProfessorRank from './components/ProfessorRank.tsx'; // تم تغيير './components/ProfessorRank' إلى './components/ProfessorRank.tsx'
-import { jarvisAsk } from './services/geminiService.ts'; // تم تغيير './services/geminiService' إلى './services/geminiService.ts'
+import { User, Channel, ContentItem, ChatMessage, Language, UserRole } from './types.ts';
+import { UNIVERSITIES } from './constants.ts';
+import ProfessorRank from './components/ProfessorRank.tsx';
+import { jarvisAsk } from './services/geminiService.ts';
 
 interface Announcement {
   id: string;
@@ -221,6 +221,66 @@ const App: React.FC = () => {
     setShowCreateChannel(false);
   };
 
+  const handleSubscribe = (channelId: string, price: number) => {
+    if (!currentUser || currentUser.role !== 'student') return;
+
+    if (currentUser.walletBalance < price) {
+      alert("رصيدك غير كافٍ للاشتراك في هذا المقياس. يرجى شحن المحفظة.");
+      return;
+    }
+
+    setChannels(prevChannels => {
+      const updatedChannels = prevChannels.map(channel => {
+        if (channel.id === channelId && !channel.subscribers.includes(currentUser.id)) {
+          return {
+            ...channel,
+            subscribers: [...channel.subscribers, currentUser.id]
+          };
+        }
+        return channel;
+      });
+      return updatedChannels;
+    });
+
+    setUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.id === currentUser.id) {
+          return { ...user, walletBalance: user.walletBalance - price };
+        }
+        if (user.id === channels.find(c => c.id === channelId)?.professorId) {
+          return { ...user, studentCount: (user.studentCount || 0) + 1 };
+        }
+        return user;
+      });
+    });
+
+    setCurrentUser(prevUser => {
+      if (!prevUser) return null;
+      return { ...prevUser, walletBalance: prevUser.walletBalance - price };
+    });
+
+    alert("تم الاشتراك في المقياس بنجاح!");
+  };
+
+  const handleRechargeWallet = () => {
+    if (!currentUser || currentUser.role !== 'student') return;
+    const rechargeAmount = 5000; // Example fixed recharge amount
+    setUsers(prevUsers => {
+      return prevUsers.map(user => {
+        if (user.id === currentUser.id) {
+          return { ...user, walletBalance: user.walletBalance + rechargeAmount };
+        }
+        return user;
+      });
+    });
+    setCurrentUser(prevUser => {
+      if (!prevUser) return null;
+      return { ...prevUser, walletBalance: prevUser.walletBalance + rechargeAmount };
+    });
+    alert(`تم شحن رصيد محفظتك بمبلغ ${rechargeAmount} دج.`);
+  };
+
+
   // Icons
   const HomeIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>;
   const AdsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 1 0 0-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>;
@@ -384,13 +444,43 @@ const App: React.FC = () => {
                     <p className="text-gray-400 text-xs font-bold line-clamp-2 leading-relaxed">{c.description}</p>
                     <div className="mt-6 flex justify-between items-center border-t dark:border-gray-800 pt-4">
                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{c.subscribers.length} طالب</span>
-                       <button className="bg-emerald-600 text-white px-5 py-2 rounded-xl text-xs font-black shadow-md">دخول</button>
+                       <button className="bg-emerald-600 text-white px-5 py-2 rounded-xl text-xs font-black shadow-md">
+                         {currentUser?.role === 'professor' ? 'إدارة' : 'دخول'}
+                       </button>
                     </div>
                   </div>
                 ))}
                 {(currentUser?.role === 'professor' ? channels.filter(c => c.professorId === currentUser.id) : channels.filter(c => c.subscribers.includes(currentUser?.id || ''))).length === 0 && (
                    <div className="col-span-full py-20 text-center bg-gray-100 dark:bg-gray-800/50 rounded-[3rem] border-4 border-dashed dark:border-gray-800">
                       <p className="text-gray-400 font-black text-lg">لا توجد مقاييس متاحة حالياً</p>
+                   </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Explore Tab (Student Only) */}
+          {activeTab === 'explore' && currentUser?.role === 'student' && (
+            <section className="space-y-8">
+              <div className="flex justify-between items-center border-r-8 border-emerald-600 pr-4">
+                <h2 className="text-2xl font-black dark:text-white uppercase tracking-tight">استكشف المقاييس الجديدة</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {channels.filter(c => !c.subscribers.includes(currentUser.id)).map(c => (
+                  <div key={c.id} className="bg-white dark:bg-gray-900 p-8 rounded-[2.5rem] border-2 border-blue-500/5 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
+                    <h3 className="text-xl font-black dark:text-white mb-2">{c.name}</h3>
+                    <p className="text-gray-400 text-xs font-bold line-clamp-2 leading-relaxed">{c.description}</p>
+                    <div className="mt-6 flex justify-between items-center border-t dark:border-gray-800 pt-4">
+                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{c.subscribers.length} طالب</span>
+                       <span className="text-sm font-black text-gray-500">{c.price} دج</span>
+                       <button onClick={() => handleSubscribe(c.id, c.price)} className="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-black shadow-md">اشتراك</button>
+                    </div>
+                  </div>
+                ))}
+                {channels.filter(c => !c.subscribers.includes(currentUser.id)).length === 0 && (
+                   <div className="col-span-full py-20 text-center bg-gray-100 dark:bg-gray-800/50 rounded-[3rem] border-4 border-dashed dark:border-gray-800">
+                      <p className="text-gray-400 font-black text-lg">لا توجد مقاييس جديدة لاستكشافها حالياً</p>
                    </div>
                 )}
               </div>
@@ -429,6 +519,34 @@ const App: React.FC = () => {
               </div>
             </section>
           )}
+
+          {/* Wallet Section */}
+          {activeTab === 'wallet' && (
+            <section className="max-w-4xl mx-auto">
+              <div className="bg-white dark:bg-gray-900 rounded-[4rem] p-12 md:p-16 shadow-2xl border dark:border-gray-800 relative overflow-hidden">
+                 <div className="flex flex-col md:flex-row items-center gap-10">
+                   <span className="text-8xl">💰</span>
+                   <div className="text-center md:text-right flex-1 space-y-4">
+                      <h2 className="text-4xl md:text-5xl font-black dark:text-white uppercase tracking-tighter leading-tight">محفظتي</h2>
+                      <p className="text-xl text-gray-400 font-bold">إدارة رصيدك على منصة WAY</p>
+                   </div>
+                 </div>
+                 <div className="mt-12 pt-12 border-t dark:border-gray-800 space-y-6">
+                    <div className="bg-emerald-600/10 p-5 rounded-3xl border border-emerald-500/20 text-center">
+                       <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-1">الرصيد الحالي</span>
+                       <p className="text-5xl font-black text-emerald-600 tracking-tighter">{currentUser?.walletBalance} <span className="text-xl">دج</span></p>
+                    </div>
+                    {currentUser?.role === 'student' && (
+                      <button onClick={handleRechargeWallet} className="w-full bg-emerald-600 text-white p-6 rounded-2xl font-black text-lg shadow-xl hover:shadow-emerald-500/20 active:scale-95 transition-all">
+                        شحن الرصيد الآن
+                      </button>
+                    )}
+                    {/* Add more wallet features here */}
+                 </div>
+              </div>
+            </section>
+          )}
+
 
           {/* Profile Section */}
           {activeTab === 'profile' && (
