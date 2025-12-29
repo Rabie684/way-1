@@ -1,9 +1,15 @@
 // Simple Service Worker for WAY PWA
-const CACHE_NAME = 'way-cache-v2'; // تم تحديث إصدار ذاكرة التخزين المؤقت
+const CACHE_NAME = 'way-cache-v3'; // تم تحديث إصدار ذاكرة التخزين المؤقت لضمان تحديث جميع الملفات
 const urlsToCache = [
   './', // index.html
   './index.html',
   './index.tsx',
+  './App.tsx',
+  './types.ts',
+  './constants.ts',
+  './utils.ts',
+  './services/geminiService.ts',
+  './components/ProfessorRank.tsx',
   './metadata.json',
   './sw.js',
   'https://img.icons8.com/fluency/192/education.png', // أيقونة Apple Touch وأيقونة Manifest
